@@ -19,5 +19,13 @@ namespace CrossPlatformUISimulator
         public required string Theme { get; init; }
     }
 
-    public record ThemeConfig(string Name, string Color);
+    public class BtnConfig
+    {
+        public required string Text { get; init; }
+    }
+
+    public class IconSrc
+    {
+        public required string Path { get; init; }
+    }
 }

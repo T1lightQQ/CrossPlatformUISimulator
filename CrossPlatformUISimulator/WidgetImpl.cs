@@ -6,61 +6,45 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator
 {
-    public class StandBtn : IWidget { public void Show() => Console.WriteLine("Рендер: Стандартная кнопка"); }
-    public class StandTxt : IWidget { public void Show() => Console.WriteLine("Рендер: Стандартное текстовое поле"); }
-    public class StandSlider : IWidget { public void Show() => Console.WriteLine("Рендер: Стандартный слайдер"); }
-
-    public class DbBtn : IWidget { public void Show() => Console.WriteLine("Рендер: [Отладка] Кнопка + Рамка (1px)"); }
-    public class DbTxt : IWidget { public void Show() => Console.WriteLine("Рендер: [Отладка] Текстовое поле + Лог системы"); }
-    public class DbSlider : IWidget { public void Show() => Console.WriteLine("Рендер: [Отладка] Слайдер + Таймер"); }
-
-    public class StandFactory : IWidgetFactory
+    public class StandBtn : IWidget
     {
-        private readonly Dictionary<WidgetType, Func<IWidget>> _registry = new();
-
-        public StandFactory()
-        {
-            _registry[WidgetType.Btn] = () => new StandBtn();
-            _registry[WidgetType.Txt] = () => new StandTxt();
-        }
-
-        public void Register(WidgetType type, Func<IWidget> builder)
-        {
-            _registry[type] = builder;
-        }
-
-        public IWidget CreateWidget(WidgetConfig config)
-        {
-            if (!_registry.TryGetValue(config.Type, out var builder))
-            {
-                throw new NotSupportedException($"Тип виджета {config.Type} не поддерживается.");
-            }
-            return builder();
-        }
+        public StandBtn() => Counter.HeavyCount++;
+        public void Show() => Console.WriteLine("Виджет: Стандартная кнопка");
+        public IWidget Clone() { Counter.CloneCount++; return new StandBtn(); }
     }
 
-    public class DbFactory : IWidgetFactory
+    public class StandTxt : IWidget
     {
-        private readonly Dictionary<WidgetType, Func<IWidget>> _registry = new();
+        public StandTxt() => Counter.HeavyCount++;
+        public void Show() => Console.WriteLine("Виджет: Текстовое поле");
+        public IWidget Clone() { Counter.CloneCount++; return new StandTxt(); }
+    }
 
-        public DbFactory()
-        {
-            _registry[WidgetType.Btn] = () => new DbBtn();
-            _registry[WidgetType.Txt] = () => new DbTxt();
-        }
+    public class StandSlider : IWidget
+    {
+        public StandSlider() => Counter.HeavyCount++;
+        public void Show() => Console.WriteLine("Виджет: Стандартный слайдер");
+        public IWidget Clone() { Counter.CloneCount++; return new StandSlider(); }
+    }
 
-        public void Register(WidgetType type, Func<IWidget> builder)
-        {
-            _registry[type] = builder;
-        }
+    public class DbBtn : IWidget
+    {
+        public DbBtn() => Counter.HeavyCount++;
+        public void Show() => Console.WriteLine("Виджет: [Отладка] Кнопка + Рамка (1px)");
+        public IWidget Clone() { Counter.CloneCount++; return new DbBtn(); }
+    }
 
-        public IWidget CreateWidget(WidgetConfig config)
-        {
-            if (!_registry.TryGetValue(config.Type, out var builder))
-            {
-                throw new NotSupportedException($"Тип виджета {config.Type} не поддерживается.");
-            }
-            return builder();
-        }
+    public class DbTxt : IWidget
+    {
+        public DbTxt() => Counter.HeavyCount++;
+        public void Show() => Console.WriteLine("Виджет: [Отладка] Текстовое поле + Лог системы");
+        public IWidget Clone() { Counter.CloneCount++; return new DbTxt(); }
+    }
+
+    public class DbSlider : IWidget
+    {
+        public DbSlider() => Counter.HeavyCount++;
+        public void Show() => Console.WriteLine("Виджет: [Отладка] Слайдер + Таймер");
+        public IWidget Clone() { Counter.CloneCount++; return new DbSlider(); }
     }
 }

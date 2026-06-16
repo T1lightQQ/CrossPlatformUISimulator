@@ -40,6 +40,21 @@ namespace CrossPlatformUISimulator
             {
                 Console.WriteLine($"\n[Перехвачено ожидаемое исключение]: {ex.Message}");
             }
+
+            UIScenarioRunner runner = new UIScenarioRunner();
+            runner.Run();
+
+            Console.WriteLine("\n=== Тест валидации Builder ===");
+            DialogBuilder badBuilder = new DialogBuilder();
+            badBuilder.SetTitle("Тест без темы");
+            try
+            {
+                badBuilder.Build();
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine($"Перехвачено ожидаемое исключение: {ex.Message}");
+            }
         }
     }
 }

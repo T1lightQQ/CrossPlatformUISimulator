@@ -4,6 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using System;
+
 namespace CrossPlatformUISimulator
 {
     public class AppHost
@@ -27,14 +29,16 @@ namespace CrossPlatformUISimulator
 
             Console.WriteLine($"\n[Системный лог] Запуск приложения с темой: {_themeFactory.ThemeName}");
 
-            IBtn button = _themeFactory.CreateButton();
-            ICheck checkBox = _themeFactory.CreateCheckBox();
-            IDlg dialog = _themeFactory.CreateDialogRenderer();
-            IFont font = _themeFactory.CreateFontEngine();
+            DialogBuilder builder = new DialogBuilder();
+            builder.SetTitle("Главное окно")
+                   .ConfigureTheme(_themeFactory)
+                   .AddButton(new BtnConfig { Text = "Действие" });
 
             IWidget extraWidget = _widgetFactory.CreateWidget(widgetConfig);
+            builder.AddCustomWidget(extraWidget);
 
-            dialog.Open(button, checkBox, extraWidget, font);
+            IDialog dialog = builder.Build();
+            dialog.ShowDialog();
         }
     }
 }

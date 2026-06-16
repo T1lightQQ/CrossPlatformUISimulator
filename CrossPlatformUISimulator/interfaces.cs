@@ -6,33 +6,45 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator
 {
-    public interface IWidget
+    public interface IPrototypical<T> where T : class
+    {
+        T Clone();
+    }
+
+    public interface IWidget : IPrototypical<IWidget>
     {
         void Show();
     }
 
-    public interface IBtn
+    public interface IBtn : IPrototypical<IBtn>
     {
+        string Text { get; }
         string Theme { get; }
         void Click();
+        IBtn WithText(string text);
     }
 
-    public interface ICheck
+    public interface ICheck : IPrototypical<ICheck>
     {
         string Theme { get; }
         void Toggle();
-    }
-
-    public interface IDlg
-    {
-        string Theme { get; }
-        void Open(IBtn btn, ICheck check, IWidget extra, IFont font);
     }
 
     public interface IFont
     {
         string Theme { get; }
         void Print();
+    }
+
+    public interface IDialog : IPrototypical<IDialog>
+    {
+        string Title { get; }
+        IconSrc? Icon { get; }
+        List<IBtn> Buttons { get; }
+        List<IWidget> Widgets { get; }
+        string ThemeName { get; }
+        void ShowDialog();
+        IDialog AddWidget(IWidget widget);
     }
 
     public interface IWidgetFactory
@@ -43,9 +55,18 @@ namespace CrossPlatformUISimulator
     public interface IThemeFactory
     {
         string ThemeName { get; }
-        IBtn CreateButton();
+        IBtn CreateButton(string text);
         ICheck CreateCheckBox();
-        IDlg CreateDialogRenderer();
         IFont CreateFontEngine();
+    }
+
+    public interface IContainerBuilder
+    {
+        IContainerBuilder SetTitle(string title);
+        IContainerBuilder AddButton(BtnConfig config);
+        IContainerBuilder SetIcon(IconSrc source);
+        IContainerBuilder ConfigureTheme(IThemeFactory theme);
+        IContainerBuilder AddCustomWidget(IWidget widget);
+        IDialog Build();
     }
 }
