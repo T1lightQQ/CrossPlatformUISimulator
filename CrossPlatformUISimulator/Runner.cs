@@ -6,59 +6,61 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator
 {
-    public class UIScenarioRunner
+    public class EndToEndScenarioRunner
     {
-        public void Run()
+        private readonly IThemeFactory _themeFactory;
+        private readonly IWidgetFactory _widgetFactory;
+        private readonly IContainerBuilder _builder;
+        private readonly IApplicationTelemetry _telemetry;
+
+        public EndToEndScenarioRunner(
+            IThemeFactory themeFactory,
+            IWidgetFactory widgetFactory,
+            IContainerBuilder builder,
+            IApplicationTelemetry telemetry)
         {
-            IThemeFactory theme = new FluentThemeFactory();
-            StandFactory widgetFactory = new StandFactory();
+            _themeFactory = themeFactory;
+            _widgetFactory = widgetFactory;
+            _builder = builder;
+            _telemetry = telemetry;
+        }
 
-            DialogBuilder builder = new DialogBuilder();
-            MultiDirector director = new MultiDirector();
+        public void RunScenario()
+        {
+            _telemetry.ResetForTesting();
+            Console.WriteLine("=== Запуск Сквозного Сценария (6 паттернов) ===");
 
-            director.Construct(builder, theme);
-            IDialog original = builder.Build();
+            MultiChoiceDialogDirector director = new MultiChoiceDialogDirector();
+            director.Construct(_builder, _themeFactory);
 
-            Console.WriteLine("=== Шаг 1: Оригинальный диалог ===");
-            original.ShowDialog();
+            IDialog originalDialog = _builder.Build();
 
-            IDialog clone = original.Clone();
+            WidgetConfig legacyConfig = new WidgetConfig { Type = WidgetType.LegacyRenderer, Theme = "Fluent" };
+            IWidget adaptedWidget = _widgetFactory.CreateWidget(legacyConfig);
 
-            WidgetConfig txtCfg = new WidgetConfig { Type = WidgetType.Txt, Theme = "Fluent" };
-            IWidget txtWidget = widgetFactory.CreateWidget(txtCfg);
+            IDialog clonedTemplate = originalDialog.Clone();
+            IDialog modifiedDialog = clonedTemplate.AddWidget(adaptedWidget);
 
-            IDialog modifiedClone = clone.AddWidget(txtWidget);
+            Console.WriteLine("\n=== Отрисовка модифицированного клона с Адаптером ===");
+            modifiedDialog.ShowDialog();
 
-            Console.WriteLine("\n=== Шаг 2: Измененный клон диалога (Добавлен виджет) ===");
-            modifiedClone.ShowDialog();
-
-            Console.WriteLine("\n=== Шаг 3: Проверка глубокой изоляции (Оригинал не изменился) ===");
-            original.ShowDialog();
-
-            Counter.Reset();
-
-            DialogBuilder massBuilder = new DialogBuilder();
-            massBuilder.SetTitle("Шаблон")
-                       .AddButton(new BtnConfig { Text = "Кнопка" })
-                       .ConfigureTheme(theme);
-
-            IDialog template = massBuilder.Build();
-
-            int totalCount = 10;
-            for (int i = 0; i < totalCount; i++)
+            Console.WriteLine("\n=== Сводная статистика телеметрии (Singleton) ===");
+            IReadOnlyDictionary<string, int> counts = _telemetry.GetOperationCounts();
+            foreach (var kvp in counts)
             {
-                IDialog instance = template.Clone();
+                Console.WriteLine($"Операция [{kvp.Key}]: Вызвана {kvp.Value} раз(а)");
             }
+        }
+    }
 
-            int heavyWithoutPrototype = totalCount * 2;
-            int heavyWithPrototype = Counter.HeavyCount;
-            double savings = ((double)(heavyWithoutPrototype - heavyWithPrototype) / heavyWithoutPrototype) * 100;
-
-            Console.WriteLine($"\n=== Тест производительности ({totalCount} созданий) ===");
-            Console.WriteLine($"Тяжелых вызовов без паттерна Prototype: {heavyWithoutPrototype}");
-            Console.WriteLine($"Тяжелых вызовов с паттерном Prototype: {heavyWithPrototype}");
-            Console.WriteLine($"Сокращение тяжелых вызовов конструкторов/фабрик на: {savings}%");
-            Console.WriteLine("Примечание по клонированию: Делегаты и события сбрасываются для предотвращения утечек памяти.");
+    public class MultiChoiceDialogDirector
+    {
+        public void Construct(IContainerBuilder builder, IThemeFactory theme)
+        {
+            builder.SetTitle("Запрос подтверждения операции")
+                   .AddButton(new BtnConfig { Text = "Принять" })
+                   .AddButton(new BtnConfig { Text = "Отклонить" })
+                   .ConfigureTheme(theme);
         }
     }
 }

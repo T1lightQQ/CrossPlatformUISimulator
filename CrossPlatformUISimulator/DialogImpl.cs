@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -37,7 +38,8 @@ namespace CrossPlatformUISimulator
 
         public IDialog Clone()
         {
-            Counter.CloneCount++;
+            var sw = Stopwatch.StartNew();
+
             var clonedButtons = new List<IBtn>();
             foreach (var b in Buttons)
             {
@@ -52,7 +54,7 @@ namespace CrossPlatformUISimulator
 
             IconSrc? clonedIcon = Icon != null ? new IconSrc { Path = Icon.Path } : null;
 
-            return new DlgObj
+            var executionResult = new DlgObj
             {
                 Title = this.Title,
                 Icon = clonedIcon,
@@ -60,6 +62,11 @@ namespace CrossPlatformUISimulator
                 Buttons = clonedButtons,
                 Widgets = clonedWidgets
             };
+
+            sw.Stop();
+            ApplicationTelemetrySingleton.Instance.LogOperation("Prototype", "Clone", sw.Elapsed, "DialogObject");
+
+            return executionResult;
         }
     }
 }

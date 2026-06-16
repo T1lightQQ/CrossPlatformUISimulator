@@ -6,55 +6,13 @@ namespace CrossPlatformUISimulator
     {
         static void Main(string[] args)
         {
-            IThemeFactory fluentTheme = new FluentThemeFactory();
-            StandFactory standardWidgetFactory = new StandFactory();
+            IThemeFactory theme = new FluentThemeFactory();
+            IWidgetFactory widgetFactory = new StandFactory();
+            IContainerBuilder builder = new DialogBuilder();
+            IApplicationTelemetry telemetry = ApplicationTelemetrySingleton.Instance;
 
-            standardWidgetFactory.Register(WidgetType.Slider, () => new StandSlider());
-
-            AppHost app1 = new AppHost(fluentTheme, standardWidgetFactory);
-
-            WidgetConfig normalConfig = new WidgetConfig
-            {
-                Type = WidgetType.Slider,
-                Theme = "Fluent"
-            };
-
-            app1.Run(normalConfig);
-
-            IThemeFactory cupertinoTheme = new CupertinoThemeFactory();
-            DbFactory debugWidgetFactory = new DbFactory();
-
-            AppHost app2 = new AppHost(cupertinoTheme, debugWidgetFactory);
-
-            WidgetConfig badConfig = new WidgetConfig
-            {
-                Type = WidgetType.Btn,
-                Theme = "Fluent"
-            };
-
-            try
-            {
-                app2.Run(badConfig);
-            }
-            catch (InvalidOperationException ex)
-            {
-                Console.WriteLine($"\n[Перехвачено ожидаемое исключение]: {ex.Message}");
-            }
-
-            UIScenarioRunner runner = new UIScenarioRunner();
-            runner.Run();
-
-            Console.WriteLine("\n=== Тест валидации Builder ===");
-            DialogBuilder badBuilder = new DialogBuilder();
-            badBuilder.SetTitle("Тест без темы");
-            try
-            {
-                badBuilder.Build();
-            }
-            catch (InvalidOperationException ex)
-            {
-                Console.WriteLine($"Перехвачено ожидаемое исключение: {ex.Message}");
-            }
+            EndToEndScenarioRunner runner = new EndToEndScenarioRunner(theme, widgetFactory, builder, telemetry);
+            runner.RunScenario();
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -65,14 +66,15 @@ namespace CrossPlatformUISimulator
                 throw new InvalidOperationException("Ошибка валидации: Необходимо добавить хотя бы одну кнопку.");
             }
 
-            Counter.HeavyCount++;
+            var sw = Stopwatch.StartNew();
+
             var buttons = new List<IBtn>();
             foreach (var cfg in _btnConfigs)
             {
                 buttons.Add(_theme.CreateButton(cfg.Text));
             }
 
-            return new DlgObj
+            var result = new DlgObj
             {
                 Title = _title,
                 Icon = _icon,
@@ -80,6 +82,11 @@ namespace CrossPlatformUISimulator
                 Buttons = buttons,
                 Widgets = new List<IWidget>(_widgets)
             };
+
+            sw.Stop();
+            ApplicationTelemetrySingleton.Instance.LogOperation("Builder", "Build", sw.Elapsed);
+
+            return result;
         }
     }
 }

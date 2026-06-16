@@ -10,7 +10,14 @@ namespace CrossPlatformUISimulator
     {
         Btn,
         Txt,
-        Slider
+        Slider,
+        LegacyRenderer
+    }
+
+    public record GlobalUiSettings
+    {
+        public required string DefaultTheme { get; init; }
+        public required bool DebugMode { get; init; }
     }
 
     public class WidgetConfig
