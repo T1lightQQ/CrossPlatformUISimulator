@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using CrossPlatformUISimulator.Common;
 using CrossPlatformUISimulator.Abstractions;
 using CrossPlatformUISimulator.Behavioral.Memento;
+using CrossPlatformUISimulator.Behavioral.Strategy;
 using CrossPlatformUISimulator.Infrastructure;
 
 namespace CrossPlatformUISimulator.Core.Components
@@ -10,11 +12,31 @@ namespace CrossPlatformUISimulator.Core.Components
     public class PanelComponent : UIComponentBase, IContainerComponent
     {
         private readonly List<IUIComponent> _children = new();
+        private ILayoutStrategy _layoutStrategy = new FreeFormLayoutStrategy();
+        private readonly object _layoutLock = new();
 
         public IReadOnlyList<IUIComponent> Children => _children;
 
         public PanelComponent(string id, Rectangle bounds, IUIStyleFlyweight flyweight)
             : base(id, bounds, flyweight) { }
+
+        public void SetLayoutStrategy(ILayoutStrategy strategy)
+        {
+            lock (_layoutLock)
+            {
+                _layoutStrategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
+            }
+        }
+
+        public IReadOnlyDictionary<string, Rectangle> CalculateLayout(LayoutContext context)
+        {
+            ILayoutStrategy currentStrategy;
+            lock (_layoutLock)
+            {
+                currentStrategy = _layoutStrategy;
+            }
+            return currentStrategy.CalculateBounds(this, context);
+        }
 
         public void AddChild(IUIComponent child)
         {
@@ -67,10 +89,13 @@ namespace CrossPlatformUISimulator.Core.Components
             {
                 clone.AddChild(child.Clone());
             }
+            lock (_layoutLock)
+            {
+                clone.SetLayoutStrategy(_layoutStrategy);
+            }
             return clone;
         }
 
-        // ЧАСТЬ 10: Обновление сборки memento-словаря с учетом полиморфного StateName
         public override IMemento CreateMemento()
         {
             var styleImpl = (UIStyleFlyweightImpl)Flyweight;

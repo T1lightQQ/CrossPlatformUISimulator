@@ -7,6 +7,8 @@ using CrossPlatformUISimulator.Behavioral.Command;
 using CrossPlatformUISimulator.Behavioral.Memento;
 using CrossPlatformUISimulator.Behavioral.State;
 using CrossPlatformUISimulator.Behavioral.Observer;
+using CrossPlatformUISimulator.Behavioral.Strategy;
+using CrossPlatformUISimulator.Behavioral.TemplateMethod;
 using CrossPlatformUISimulator.Core.Components;
 
 namespace CrossPlatformUISimulator
@@ -15,9 +17,9 @@ namespace CrossPlatformUISimulator
     {
         public static void Main()
         {
-            Console.WriteLine("=== ЧАСТЬ 10: СИНТЕНЗ ВСЕХ ~20 ПАТТЕРНОВ (STATE + OBSERVER) ===");
+            Console.WriteLine("=== ЧАСТЬ 11: СКВОЗНАЯ ИНТЕГРАЦИЯ ~22 ПАТТЕРНОВ (STRATEGY + TEMPLATE METHOD) ===");
 
-            // 1. Конфигурация подсистем
+            // 1. Построение системы через Фасад
             var router = new SequentialEventRouter();
             var validationChain = new SpamProtectionHandler();
             var mediator = new EventDrivenMediator(router, validationChain);
@@ -25,53 +27,68 @@ namespace CrossPlatformUISimulator
             var caretaker = new UIMementoManager();
 
             var defaultStyle = FlyweightFactory.Instance.GetFlyweight(new StyleKey("Segoe UI", 12, 240, 240, 240));
-            var rootPanel = new PanelComponent("MainWindow", new Rectangle(0, 0, 1024, 768), defaultStyle);
+            var rootPanel = new PanelComponent("MainContainer", new Rectangle(0, 0, 1024, 768), defaultStyle);
             var facade = new UISystemFacade(mediator, cmdManager, rootPanel);
 
-            var actionButton = new ButtonComponent("SubmitBtn", new Rectangle(50, 50, 200, 50), defaultStyle);
+            var okButton = new ButtonComponent("OkBtn", new Rectangle(0, 0, 150, 40), defaultStyle);
+            var cancelButton = new ButtonComponent("CancelBtn", new Rectangle(0, 0, 150, 40), defaultStyle);
+
             mediator.Register(rootPanel);
-            mediator.Register(actionButton);
-            rootPanel.AddChild(actionButton);
+            mediator.Register(okButton);
+            mediator.Register(cancelButton);
 
-            // 2. Реактивная интеграция (Observer)
-            var telemetryObs = new TelemetryObserver();
-            var themeObs = new ThemeSyncObserver();
-            actionButton.Attach(telemetryObs);
-            actionButton.Attach(themeObs);
+            rootPanel.AddChild(okButton);
+            rootPanel.AddChild(cancelButton);
 
-            // 3. Фиксация стабильного снапшота (Memento)
-            caretaker.SaveCheckpoint("StableSnapshot", rootPanel);
+            // Назначаем начальную стратегию по умолчанию (Свободные координаты)
+            rootPanel.SetLayoutStrategy(new FreeFormLayoutStrategy());
 
-            // 4. Демонстрация изменения поведения (State)
-            Console.WriteLine($"\n[State] Текущее состояние кнопки: {actionButton.CurrentState.StateName}");
-            Console.WriteLine("[User] Инициируем клик в NormalState:");
-            actionButton.UserClick(); // Сработает Медиатор
+            // 2. Регистрация глобальных слушателей реактивных изменений
+            var telemetry = new TelemetryObserver();
+            okButton.Attach(telemetry);
+            rootPanel.Attach(telemetry);
 
-            Console.WriteLine("\n[Command] Переводим кнопку в LoadingState через команду...");
-            var loadingCmd = new StartLoadingCommand(actionButton);
-            cmdManager.Execute(loadingCmd); // Trigger State Change -> Notify Observers
+            // 3. Снапшот конфигурации до применения алгоритмов
+            caretaker.SaveCheckpoint("BeforeLayoutAndLifecycle", rootPanel);
 
-            Console.WriteLine($"\n[State] Текущее состояние кнопки: {actionButton.CurrentState.StateName}");
-            Console.WriteLine("[User] Пытаемся нажать кнопку во время загрузки:");
-            actionButton.UserClick(); // Клик заблокирован полиморфным LoadingState (NoOp)
+            // 4. Демонстрация паттерна Strategy в связке с Command
+            Console.WriteLine("\n[Strategy] Переключаем макет панели на StackLayoutStrategy (Вертикальный список)...");
+            var layoutContext = new LayoutContext(15, 10, 1024, 768, 1.0);
 
-            // 5. Использование Undo (Возврат к Normal)
-            Console.WriteLine("\n[Undo] Отмена команды загрузки...");
+            // Выполняем смену алгоритмов через команду управления
+            var changeLayoutCmd = new ApplyLayoutCommand(rootPanel, new StackLayoutStrategy(), layoutContext);
+            cmdManager.Execute(changeLayoutCmd);
+
+            Console.WriteLine($"[Layout] Новые границы OkBtn после макетирования: X={okButton.BoundingBox.X}, Y={okButton.BoundingBox.Y}, W={okButton.BoundingBox.Width}, H={okButton.BoundingBox.Height}");
+
+            // 5. Демонстрация паттерна Template Method
+            Console.WriteLine("\n[Template Method] Запуск жестко структурированного жизненного цикла контейнера...");
+            var containerLifecycle = new ComplexContainerLifecycle(rootPanel);
+            var uiContext = new UIContext
+            {
+                Timestamp = DateTime.UtcNow,
+                ExecutorName = "LifecycleStrategyRunner",
+                IsDebugMode = true
+            };
+
+            // Вызов защищенного каркаса
+            containerLifecycle.ExecuteLifecycle(uiContext);
+
+            Console.WriteLine("\n[Lifecycle Metrics] Сводные данные по выполненным шагам:");
+            foreach (var step in uiContext.SharedMetrics)
+            {
+                Console.WriteLine($" - Этап '{step.Key}' зафиксирован {step.Value} раз(а).");
+            }
+
+            // 6. Демонстрация Undo (Возврат к исходным свободным координатам)
+            Console.WriteLine("\n[Undo] Отмена команды макетирования (Возврат к FreeForm)...");
             cmdManager.Undo();
-            Console.WriteLine($"[State] Состояние после отмены: {actionButton.CurrentState.StateName}");
+            Console.WriteLine($"[Layout] Восстановленные координаты OkBtn: X={okButton.BoundingBox.X}, Y={okButton.BoundingBox.Y}");
 
-            // 6. Искусственный перевод в аварийный режим
-            Console.WriteLine("\n[Command] Перевод в аварийный режим...");
-            cmdManager.Execute(new TriggerErrorCommand(actionButton));
-            Console.WriteLine($"[State] Состояние: {actionButton.CurrentState.StateName}, Текст: {actionButton.TextContent}");
-
-            // 7. Полный откат иерархии через Топологический Memento Снапшот
-            Console.WriteLine("\n[Memento] Восстановление системы к первоначальному чекпоинту...");
-            caretaker.RestoreCheckpoint("StableSnapshot", rootPanel);
-            Console.WriteLine($"[State] Финальное состояние кнопки: {actionButton.CurrentState.StateName}, Текст: {actionButton.TextContent}");
-
-            // 8. Запуск нагрузочного профилирования производительности
+            // 7. Проведение комплексных лабораторных бенчмарк-тестов
             PerformanceBenchmarks.RunAllTests();
+
+            Console.WriteLine("\n=== СБОРКА И ТЕСТИРОВАНИЕ ЧАСТИ 11 УСПЕШНО ЗАВЕРШЕНЫ ===");
         }
     }
 }

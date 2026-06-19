@@ -9,20 +9,23 @@ namespace CrossPlatformUISimulator.Common
     public record FontMetrics(string Name, int Size);
     public record ColorPalette(Color Background, Color Border, Color Text);
 
-    // Ключ для Flyweight-фабрики стилей
     public record struct StyleKey(string FontName, int FontSize, byte R, byte G, byte B) : IEquatable<StyleKey>;
-
-    // Базовый атомарный класс события для Mediator
     public record UIEvent(Guid SenderId, DateTime Timestamp, string EventType, object? Payload);
-
-    // Единица трансляции DSL скрипта
     public record Token(TokenType Type, string Value, int Position);
-
-    // ЧАСТЬ 28: Атомарные данные изменения состояния для паттерна Observer
     public record UIStateChangeData(string StateType, string OldValue, string NewValue, DateTime Timestamp);
-
-    // ЧАСТЬ 29: Расширенный снимок состояния для паттерна Memento с поддержкой StateName
     public record ExtrinsicComponentState(Rectangle Bounds, string Text, bool Enabled, StyleKey Style, string StateName);
+
+    // ЧАСТЬ 31: Неизменяемый контекст для расчёта стратегий макетирования
+    public readonly record struct LayoutContext(int Padding, int Spacing, int AvailableWidth, int AvailableHeight, double DpiScale);
+
+    // ЧАСТЬ 32: Контекст для выполнения этапов жизненного цикла (передаётся по ссылке только для чтения)
+    public record UIContext
+    {
+        public required DateTime Timestamp { get; init; }
+        public required string ExecutorName { get; init; }
+        public bool IsDebugMode { get; init; }
+        public Dictionary<string, object> SharedMetrics { get; init; } = new();
+    }
 
     public record DialogPreset
     {

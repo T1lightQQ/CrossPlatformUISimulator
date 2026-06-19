@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using CrossPlatformUISimulator.Common;
 using CrossPlatformUISimulator.Abstractions;
 using CrossPlatformUISimulator.Core.Components;
@@ -25,11 +26,21 @@ namespace CrossPlatformUISimulator.Facade
         public void Subscribe(Predicate<UIEvent> filter, Action<UIEvent> handler) =>
             _mediator.AddSub(filter, handler);
 
-        // Быстрая регистрация наблюдателей изменений состояния через Фасад
         public void AttachObserverTo(string componentId, IUIStateObserver observer)
         {
             var comp = Root.FindById<IUIComponent>(componentId);
             comp?.Attach(observer);
+        }
+
+        // ЧАСТЬ 31: Выполнение транзакции смены и расчета стратегии макета
+        public void ApplyLayout(string containerId, ILayoutStrategy strategy, LayoutContext context)
+        {
+            var container = Root.FindById<IContainerComponent>(containerId);
+            if (container != null)
+            {
+                var cmd = new ApplyLayoutCommand(container, strategy, context);
+                _commandManager.Execute(cmd);
+            }
         }
 
         public void ExecuteDsl(string script)

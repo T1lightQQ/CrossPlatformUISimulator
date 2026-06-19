@@ -4,13 +4,11 @@ using CrossPlatformUISimulator.Common;
 
 namespace CrossPlatformUISimulator.Abstractions
 {
-    // Паттерн Prototype
     public interface IPrototypical<T> where T : class
     {
         T Clone();
     }
 
-    // Корневой компонент (Базовый интерфейс для Composite, Proxy, Decorator, Subject)
     public interface IUIComponent : IPrototypical<IUIComponent>, IDisposable, IUIStateSubject
     {
         string Id { get; }
@@ -18,23 +16,24 @@ namespace CrossPlatformUISimulator.Abstractions
         string TextContent { get; set; }
         bool Enabled { get; set; }
         IUIStyleFlyweight Flyweight { get; set; }
-
-        // Паттерн State: Доступ к текущему полиморфному состоянию и метод безопасного перехода
         IComponentState CurrentState { get; }
-        void TransitionTo(IComponentState newState);
 
+        void TransitionTo(IComponentState newState);
         void Render(IRenderingContext ctx);
         void SetPosition(Point position);
         void SetMediator(IUIComponentMediator mediator);
         T? FindById<T>(string id) where T : class, IUIComponent;
     }
 
-    // Интерфейс контейнера для паттерна Composite
     public interface IContainerComponent : IUIComponent
     {
         IReadOnlyList<IUIComponent> Children { get; }
         void AddChild(IUIComponent child);
         void RemoveChild(IUIComponent child);
         void ReplaceChild(string id, IUIComponent newChild);
+
+        // ЧАСТЬ 31: Управление стратегией размещения элементов внутри контейнера
+        void SetLayoutStrategy(ILayoutStrategy strategy);
+        IReadOnlyDictionary<string, Rectangle> CalculateLayout(LayoutContext context);
     }
 }
