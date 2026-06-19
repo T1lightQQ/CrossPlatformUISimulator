@@ -11,10 +11,16 @@ namespace CrossPlatformUISimulator
         T Clone();
     }
 
+    // Расширенный интерфейс UI-компонента, разделяющий внутреннее и внешнее состояние
     public interface IUIComponent : IPrototypical<IUIComponent>
     {
         string Id { get; }
-        Rectangle BoundingBox { get; }
+        Rectangle BoundingBox { get; set; } // Изменяемый Extrinsic State
+        string TextContent { get; set; }   // Изменяемый Extrinsic State
+        bool Enabled { get; set; }         // Изменяемый Extrinsic State
+        int ZIndex { get; set; }           // Изменяемый Extrinsic State
+        IUIStyleFlyweight Flyweight { get; } // Ссылка на Intrinsic State
+
         void Render(IRenderingContext ctx);
         void SetPosition(Point position);
         T? FindById<T>(string id) where T : class, IUIComponent;
@@ -29,6 +35,23 @@ namespace CrossPlatformUISimulator
         void RemoveChild(IUIComponent child);
     }
 
+    // Легковесный неизменяемый стиль (Flyweight)
+    public interface IUIStyleFlyweight
+    {
+        Guid StyleId { get; }
+        FontMetrics Font { get; }
+        ColorPalette Palette { get; }
+        byte[]? IconBytes { get; }
+    }
+
+    // Контракт для ленивых виртуальных прокси-серверов
+    public interface ILazyComponentProxy : IUIComponent
+    {
+        bool IsMaterialized { get; }
+        void Materialize();
+        IUIComponent GetRealSubject();
+    }
+
     public interface IRenderingStrategy
     {
         string StrategyName { get; }
@@ -41,7 +64,7 @@ namespace CrossPlatformUISimulator
 
     public interface IWidgetFactory
     {
-        IUIComponent CreateWidget(WidgetConfig config, IRenderingStrategy strategy);
+        IUIComponent CreateWidget(WidgetConfig config, IRenderingStrategy strategy, IUIStyleFlyweight flyweight);
     }
 
     public interface IThemeFactory

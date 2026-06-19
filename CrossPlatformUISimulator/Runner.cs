@@ -7,87 +7,127 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator
 {
-    public class ApplicationEntryPoint
+    public class ScaleTestRunner
     {
-        public static void RunFullPipeline()
+        public static void RunScaleTests()
         {
-            IThemeFactory theme = new FluentThemeFactory();
-            IWidgetFactory widgetFactory = new StandFactory();
-            IContainerBuilder builder = new UIContainerBuilder();
-            IApplicationTelemetry telemetry = ApplicationTelemetrySingleton.Instance;
+            Console.WriteLine("=== ЗАПУСК МАСШТАБНЫХ ИСПЫТАНИЙ: FLYWEIGHT + PROXY ===");
 
-            IUISystemFacade facade = new UISystemFacade(theme, widgetFactory, builder, telemetry);
+            var factory = new StandFactory();
+            var strategy = new RasterRenderingStrategy();
+            var telemetry = ApplicationTelemetrySingleton.Instance;
 
-            Console.WriteLine("=== СКВОЗНОЙ СЦЕНАРИЙ (10 ПАТТЕРНОВ) ===");
-
-            DialogPreset preset = new DialogPreset
+            // Генерируем 5 эталонных стилей общего пользования
+            StyleKey[] sharedStyles = new StyleKey[5];
+            for (int i = 0; i < 5; i++)
             {
-                Title = "Подтверждение Фасада",
-                Bounds = new Rectangle(0, 0, 400, 300),
-                Decorators = new[] { DecoratorType.Border, DecoratorType.RenderLog }
-            };
+                sharedStyles[i] = new StyleKey("Segoe UI", 10 + i, (byte)(50 * i), 120, 200);
+            }
 
-            IContainerComponent dialog = facade.CreateDialog(preset, ThemeType.Fluent);
+            // --- 1. Построение дерева масштабирования из 5 000 узлов через фасад ---
+            var panelStyle = FlyweightFactory.Instance.GetFlyweight(sharedStyles[0]);
+            var rootPanel = new PanelComponent("MegaPanel", new Rectangle(0, 0, 1920, 1080), strategy, panelStyle);
 
-            Console.WriteLine("\nПервичный рендеринг через Фасад:");
-            facade.RenderAllToContext(new DefaultRenderingContext());
+            Stopwatch swColdStart = Stopwatch.StartNew();
 
-            Console.WriteLine("\n[Тест Прототипа] Клонирование декорированного поддерева:");
-            IContainerComponent clonedDialog = (IContainerComponent)dialog.Clone();
+            // Добавляем 2000 реальных узлов
+            for (int i = 0; i < 2000; i++)
+            {
+                var style = FlyweightFactory.Instance.GetFlyweight(sharedStyles[i % 5]);
+                rootPanel.AddChild(new ButtonComponent($"RealBtn_{i}", new Rectangle(0, 0, 10, 10), "Click", strategy, style));
+            }
 
-            Console.WriteLine("\n[Тест Моста] Динамическая смена темы:");
-            facade.ApplyGlobalTheme(ThemeType.Cupertino);
-            facade.RenderAllToContext(new DefaultRenderingContext());
+            // Добавляем 3000 прокси-узлов (Virtual Proxy)
+            List<VirtualComponentProxy> proxyList = new();
+            for (int i = 0; i < 3000; i++)
+            {
+                var cfg = new WidgetConfig
+                {
+                    Type = WidgetType.Label,
+                    Id = $"ProxyLabel_{i}",
+                    Bounds = new Rectangle(5, 5, 100, 20),
+                    Style = sharedStyles[i % 5]
+                };
+                var proxy = new VirtualComponentProxy(cfg, factory, strategy);
+                rootPanel.AddChild(proxy);
+                proxyList.Add(proxy);
+            }
+            swColdStart.Stop();
 
-            facade.LogCurrentMetrics();
+            // --- 2. Эмуляция работы: материализация ~30% прокси через Render ---
+            DefaultRenderingContext context = new();
+            int nodesToMaterialize = (int)(proxyList.Count * 0.30);
+            for (int i = 0; i < nodesToMaterialize; i++)
+            {
+                proxyList[i].Render(context);
+            }
 
-            RunDecoratorBenchmark();
+            // --- 3. Ограничение доступа через ProtectionProxy для 1000 узлов ---
+            List<ProtectionComponentProxy> lockedNodes = new();
+            for (int i = 0; i < 1000; i++)
+            {
+                var protectedComp = new ProtectionComponentProxy(proxyList[i]);
+                protectedComp.LockComponent();
+                lockedNodes.Add(protectedComp);
+            }
+
+            // Проверка защитного прокси на исключение
+            try
+            {
+                lockedNodes[0].SetPosition(new Point(99, 99));
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine($"[Успешный тест ProtectionProxy]: Перехвачено исключение защиты: {ex.Message}");
+            }
+
+            // --- 4. Проверка интеграции с Prototype (Глубокое клонирование) ---
+            var testBtn = new ButtonComponent("ProtoBtn", new Rectangle(0, 0, 5, 5), "Txt", strategy, FlyweightFactory.Instance.GetFlyweight(sharedStyles[0]));
+            var clonedBtn = (ButtonComponent)testBtn.Clone();
+
+            bool flyweightShared = ReferenceEquals(testBtn.Flyweight, clonedBtn.Flyweight);
+            Console.WriteLine($"[Тест Prototype]: Ссылки на Flyweight идентичны у клонов? {flyweightShared}");
+
+            ExecuteValidationExperiments(sharedStyles, factory, strategy);
         }
 
-        private static void RunDecoratorBenchmark()
+        private static void ExecuteValidationExperiments(StyleKey[] styles, IWidgetFactory factory, IRenderingStrategy strategy)
         {
-            Console.WriteLine("\n=== БЕНЧМАРК НАКЛАДНЫХ РАСХОДОВ ДЕКОРАТОРОВ ===");
-            IRenderingStrategy strategy = new RasterRenderingStrategy();
+            Console.WriteLine("\n=== ЭКСПЕРИМЕНТАЛЬНАЯ ВАЛИДАЦИЯ МЕТРИК ===");
 
-            IUIComponent clean = new ButtonComponent("btn", new Rectangle(0, 0, 10, 10), "Text", strategy);
-            IUIComponent oneDecorator = new BorderDecorator(clean);
-            IUIComponent threeDecorators = new CachedRenderDecorator(new RenderLogDecorator(new BorderDecorator(clean)));
+            // Валидация Flyweight
+            FlyweightFactory.Instance.ResetMetrics();
+            for (int i = 0; i < 5000; i++)
+            {
+                FlyweightFactory.Instance.GetFlyweight(styles[i % 5]);
+            }
+            int instancesWithFactory = FlyweightFactory.Instance.TotalInstancesCreated;
+            int instancesWithoutFactory = 5000;
+            double savings = (1.0 - ((double)instancesWithFactory / instancesWithoutFactory)) * 100;
+            Console.WriteLine($"[Flyweight] Экземпляров без фабрики: {instancesWithoutFactory}, с фабрикой: {instancesWithFactory}");
+            Console.WriteLine($"[Flyweight] Сокращение выделения памяти под стили на: {savings:F1}% (Ожидается: 80–95%)");
 
-            IRenderingContext dummyContext = new DefaultRenderingContext();
+            // Валидация Proxy холодного старта
+            Stopwatch swPure = Stopwatch.StartNew();
+            for (int i = 0; i < 2000; i++)
+            {
+                var style = FlyweightFactory.Instance.GetFlyweight(styles[i % 5]);
+                var clean = new LabelComponent($"L_{i}", new Rectangle(0, 0, 10, 10), "Txt", strategy, style);
+            }
+            swPure.Stop();
 
-            // Подавляем консольный вывод декораторов для чистоты замера времени
-            var originalOut = Console.Out;
-            Console.SetOut(System.IO.TextWriter.Null);
+            Stopwatch swProxy = Stopwatch.StartNew();
+            for (int i = 0; i < 2000; i++)
+            {
+                var cfg = new WidgetConfig { Type = WidgetType.Label, Id = $"L_{i}", Bounds = new Rectangle(0, 0, 10, 10), Style = styles[i % 5] };
+                var p = new VirtualComponentProxy(cfg, factory, strategy);
+            }
+            swProxy.Stop();
 
-            // а) Чистый компонент
-            Stopwatch swClean = Stopwatch.StartNew();
-            for (int i = 0; i < 1000; i++) clean.Render(dummyContext);
-            swClean.Stop();
-
-            // б) 1 декоратор
-            Stopwatch swOne = Stopwatch.StartNew();
-            for (int i = 0; i < 1000; i++) oneDecorator.Render(dummyContext);
-            swOne.Stop();
-
-            // в) 3 декоратора в цепочке
-            Stopwatch swThree = Stopwatch.StartNew();
-            for (int i = 0; i < 1000; i++) threeDecorators.Render(dummyContext);
-            swThree.Stop();
-
-            // Тест Кэширования (Повторный рендеринг кэшированного компонента)
-            Stopwatch swCached = Stopwatch.StartNew();
-            for (int i = 0; i < 1000; i++) threeDecorators.Render(dummyContext);
-            swCached.Stop();
-
-            Console.SetOut(originalOut);
-
-            Console.WriteLine($"Чистый компонент (1000 вызовов) : {swClean.Elapsed.TotalMilliseconds:F3} мс");
-            Console.WriteLine($"1 Декоратор (1000 вызовов)     : {swOne.Elapsed.TotalMilliseconds:F3} мс");
-            Console.WriteLine($"3 Декоратора (1000 вызовов)    : {swThree.Elapsed.TotalMilliseconds:F3} мс");
-            Console.WriteLine($"Повторный Кэшированный рендер   : {swCached.Elapsed.TotalMilliseconds:F3} мс");
-
-            double reduction = (1.0 - (swCached.Elapsed.TotalMilliseconds / swThree.Elapsed.TotalMilliseconds)) * 100;
-            Console.WriteLine($"Эффективность CachedRenderDecorator: Время сокращено на {reduction:F1}% (Ожидается: >=70%)");
+            double speedup = (1.0 - ((double)swProxy.ElapsedTicks / swPure.ElapsedTicks)) * 100;
+            Console.WriteLine($"[Proxy] Время мгновенного создания: {swPure.Elapsed.TotalMilliseconds:F3} мс");
+            Console.WriteLine($"[Proxy] Время создания через VirtualProxy: {swProxy.Elapsed.TotalMilliseconds:F3} мс");
+            Console.WriteLine($"[Proxy] Ускорение холодного старта на: {speedup:F1}% (Ожидается: >=40%)");
         }
     }
 }

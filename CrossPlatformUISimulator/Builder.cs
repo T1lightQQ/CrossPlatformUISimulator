@@ -42,15 +42,18 @@ namespace CrossPlatformUISimulator
         public IContainerComponent Build()
         {
             if (_id == null || _bounds == null || _theme == null)
-                throw new InvalidOperationException("Ошибка валидации: Недостаточно данных для сборки контейнера.");
+                throw new InvalidOperationException("Ошибка валидации данных сборщика.");
 
-            var sw = Stopwatch.StartNew();
             IRenderingStrategy strategy = _theme.CreateRenderingStrategy();
-            var rootPanel = new PanelComponent(_id, _bounds, strategy);
+            StyleKey defaultKey = new StyleKey("Arial", 12, 255, 255, 255);
+            var styleFlyweight = FlyweightFactory.Instance.GetFlyweight(defaultKey);
+
+            var rootPanel = new PanelComponent(_id, _bounds, strategy, styleFlyweight);
 
             foreach (var btnCfg in _buttonsToCreate)
             {
-                rootPanel.AddChild(new ButtonComponent(btnCfg.Id, btnCfg.Bounds, btnCfg.Text, strategy));
+                var btnStyle = FlyweightFactory.Instance.GetFlyweight(btnCfg.Style.FontName == null ? defaultKey : btnCfg.Style);
+                rootPanel.AddChild(new ButtonComponent(btnCfg.Id, btnCfg.Bounds, btnCfg.Text, strategy, btnStyle));
             }
 
             foreach (var comp in _customComponents)
@@ -66,9 +69,6 @@ namespace CrossPlatformUISimulator
                 finalComponent = decoratorFactory(finalComponent);
             }
 
-            sw.Stop();
-            ApplicationTelemetrySingleton.Instance.LogOperation("Builder", "Build", sw.Elapsed, _id);
-
             return (IContainerComponent)finalComponent;
         }
 
@@ -76,30 +76,21 @@ namespace CrossPlatformUISimulator
         {
             var visitedContainers = new HashSet<string>();
             var registeredIds = new HashSet<string>();
-
             var stack = new Stack<IUIComponent>();
             stack.Push(root);
 
             while (stack.Count > 0)
             {
                 var current = stack.Pop();
-
                 if (!registeredIds.Add(current.Id))
-                {
-                    throw new InvalidOperationException($"Критическая ошибка иерархии: Обнаружен дубликат Id '{current.Id}' в поддереве!");
-                }
+                    throw new InvalidOperationException($"Дублирование Id '{current.Id}'!");
 
                 if (current is IContainerComponent container)
                 {
                     if (!visitedContainers.Add(container.Id))
-                    {
-                        throw new InvalidOperationException("Критическая ошибка иерархии: Обнаружена циклическая ссылка в дереве компонентов!");
-                    }
+                        throw new InvalidOperationException("Обнаружена циклическая ссылка!");
 
-                    foreach (var child in container.Children)
-                    {
-                        stack.Push(child);
-                    }
+                    foreach (var child in container.Children) stack.Push(child);
                 }
             }
         }

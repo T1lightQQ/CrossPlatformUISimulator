@@ -43,7 +43,7 @@ namespace CrossPlatformUISimulator
                 _builder.SetId("FacadeDialogRoot")
                         .SetBounds(preset.Bounds)
                         .ConfigureTheme(_currentFactory)
-                        .AddButton(new BtnConfig { Id = "btnOk", Text = preset.Title, Bounds = new Rectangle(10, 10, 150, 35) });
+                        .AddButton(new BtnConfig { Id = "btnOk", Text = preset.Title, Bounds = new Rectangle(10, 10, 150, 35), Style = preset.Style });
 
                 if (preset.Decorators != null)
                 {
@@ -51,15 +51,9 @@ namespace CrossPlatformUISimulator
                     {
                         switch (decType)
                         {
-                            case DecoratorType.Border:
-                                _builder.ApplyDecorator(c => new BorderDecorator(c));
-                                break;
-                            case DecoratorType.RenderLog:
-                                _builder.ApplyDecorator(c => new RenderLogDecorator(c));
-                                break;
-                            case DecoratorType.Cached:
-                                _builder.ApplyDecorator(c => new CachedRenderDecorator(c));
-                                break;
+                            case DecoratorType.Border: _builder.ApplyDecorator(c => new BorderDecorator(c)); break;
+                            case DecoratorType.RenderLog: _builder.ApplyDecorator(c => new RenderLogDecorator(c)); break;
+                            case DecoratorType.Cached: _builder.ApplyDecorator(c => new CachedRenderDecorator(c)); break;
                         }
                     }
                 }
@@ -86,17 +80,21 @@ namespace CrossPlatformUISimulator
                 };
 
                 if (_rootTree == null) return;
-
                 IRenderingStrategy newStrategy = _currentFactory.CreateRenderingStrategy();
 
-                // Проход по всему дереву (Bridge runtime switch)
                 var stack = new Stack<IUIComponent>();
                 stack.Push(_rootTree);
 
                 while (stack.Count > 0)
                 {
                     var current = stack.Pop();
-                    if (current is UIComponentBase baseComponent)
+
+                    if (current is VirtualComponentProxy proxy)
+                    {
+                        // Обновляем стратегию прокси без принудительной полной материализации
+                        proxy.UpdateStrategy(newStrategy);
+                    }
+                    else if (current is UIComponentBase baseComponent)
                     {
                         baseComponent.SwitchRenderingStrategy(newStrategy);
                     }
@@ -107,10 +105,7 @@ namespace CrossPlatformUISimulator
 
                     if (current is IContainerComponent container)
                     {
-                        foreach (var child in container.Children)
-                        {
-                            stack.Push(child);
-                        }
+                        foreach (var child in container.Children) stack.Push(child);
                     }
                 }
 
@@ -140,11 +135,7 @@ namespace CrossPlatformUISimulator
             _lock.EnterReadLock();
             try
             {
-                Console.WriteLine("\n--- МЕТРИКИ СИСТЕМЫ (СИНГЛТОН) ---");
-                foreach (var kvp in _telemetry.GetOperationCounts())
-                {
-                    Console.WriteLine($"[{kvp.Key}]: вызвана {kvp.Value} раз(а)");
-                }
+                Console.WriteLine($"[Flyweight Статистика]: Hits={FlyweightFactory.Instance.Hits}, Misses={FlyweightFactory.Instance.Misses}, Всего={FlyweightFactory.Instance.TotalInstancesCreated}");
             }
             finally
             {

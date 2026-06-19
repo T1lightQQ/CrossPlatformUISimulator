@@ -19,11 +19,7 @@ namespace CrossPlatformUISimulator
 
         internal ApplicationTelemetrySingleton()
         {
-            _settings = new GlobalUiSettings
-            {
-                DefaultTheme = "Fluent",
-                DebugMode = true
-            };
+            _settings = new GlobalUiSettings { DefaultTheme = "Fluent", DebugMode = true };
         }
 
         public void LogOperation(string category, string action, TimeSpan duration, string? metadata = null)

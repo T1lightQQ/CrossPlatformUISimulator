@@ -16,23 +16,17 @@ namespace CrossPlatformUISimulator
         LegacyRenderer
     }
 
-    public enum ThemeType
-    {
-        Fluent,
-        Cupertino
-    }
-
-    public enum DecoratorType
-    {
-        Border,
-        RenderLog,
-        Cached
-    }
+    public enum ThemeType { Fluent, Cupertino }
+    public enum DecoratorType { Border, RenderLog, Cached }
 
     public record Point(int X, int Y);
     public record Rectangle(int X, int Y, int Width, int Height);
     public record Color(byte R, byte G, byte B);
     public record FontMetrics(string Name, int Size);
+    public record ColorPalette(Color Background, Color Border, Color Text);
+
+    // Ключ для уникальной идентификации разделяемого состояния Flyweight
+    public record struct StyleKey(string FontName, int FontSize, byte R, byte G, byte B) : IEquatable<StyleKey>;
 
     public interface IRenderingContext { }
     public class DefaultRenderingContext : IRenderingContext { }
@@ -45,6 +39,7 @@ namespace CrossPlatformUISimulator
         public required Rectangle Bounds { get; init; }
         public ThemeType? Theme { get; init; }
         public DecoratorType[]? Decorators { get; init; }
+        public StyleKey Style { get; init; }
     }
 
     public record GlobalUiSettings
@@ -58,6 +53,7 @@ namespace CrossPlatformUISimulator
         public required WidgetType Type { get; init; }
         public required string Id { get; init; }
         public required Rectangle Bounds { get; init; }
+        public required StyleKey Style { get; init; }
     }
 
     public class BtnConfig
@@ -65,10 +61,6 @@ namespace CrossPlatformUISimulator
         public required string Id { get; init; }
         public required string Text { get; init; }
         public required Rectangle Bounds { get; init; }
-    }
-
-    public class IconSrc
-    {
-        public required string Path { get; init; }
+        public StyleKey Style { get; init; }
     }
 }
