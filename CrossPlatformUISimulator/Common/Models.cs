@@ -15,10 +15,10 @@ namespace CrossPlatformUISimulator.Common
     public record UIStateChangeData(string StateType, string OldValue, string NewValue, DateTime Timestamp);
     public record ExtrinsicComponentState(Rectangle Bounds, string Text, bool Enabled, StyleKey Style, string StateName);
 
-    // ЧАСТЬ 31: Неизменяемый контекст для расчёта стратегий макетирования
+    
     public readonly record struct LayoutContext(int Padding, int Spacing, int AvailableWidth, int AvailableHeight, double DpiScale);
 
-    // ЧАСТЬ 32: Контекст для выполнения этапов жизненного цикла (передаётся по ссылке только для чтения)
+    
     public record UIContext
     {
         public required DateTime Timestamp { get; init; }

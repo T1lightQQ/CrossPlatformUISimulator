@@ -8,7 +8,7 @@ using CrossPlatformUISimulator.Core.Components;
 
 namespace CrossPlatformUISimulator.DSL
 {
-    // Интерфейс выражения в паттерне Interpreter
+    
     public interface IExpression
     {
         void Interpret(UIInterpreterContext context);
@@ -29,7 +29,7 @@ namespace CrossPlatformUISimulator.DSL
         public void Interpret(UIInterpreterContext context) { }
     }
 
-    // Выражение SELECT
+   
     public record SelectExpression(TypeSelectorExpression TypeSelector, WhereExpression? WhereExpr) : IExpression
     {
         public void Interpret(UIInterpreterContext context)
@@ -54,7 +54,7 @@ namespace CrossPlatformUISimulator.DSL
         }
     }
 
-    // Выражение WHERE
+   
     public record WhereExpression(PredicateExpression PredicateExpr) : IExpression
     {
         public void Interpret(UIInterpreterContext context)
@@ -71,13 +71,13 @@ namespace CrossPlatformUISimulator.DSL
         }
     }
 
-    // Выражение EXECUTE
+    
     public record ExecuteExpression(ChainExpression Chain) : IExpression
     {
         public void Interpret(UIInterpreterContext context) => Chain.Interpret(context);
     }
 
-    // Выражение цепочки действий (Action1 -> Action2)
+   
     public record ChainExpression(List<ActionExpression> Actions) : IExpression
     {
         public void Interpret(UIInterpreterContext context)
@@ -108,7 +108,7 @@ namespace CrossPlatformUISimulator.DSL
         }
     }
 
-    // Корневой конвейер (SELECT -> EXECUTE)
+   
     public record PipelineExpression(SelectExpression Select, ExecuteExpression Execute) : IExpression
     {
         public void Interpret(UIInterpreterContext context)

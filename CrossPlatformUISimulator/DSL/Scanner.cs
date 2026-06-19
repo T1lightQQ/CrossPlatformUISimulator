@@ -4,7 +4,7 @@ using CrossPlatformUISimulator.Common;
 
 namespace CrossPlatformUISimulator.DSL
 {
-    // Лексический анализатор (Токенизатор)
+   
     public class Scanner
     {
         private readonly string _source;

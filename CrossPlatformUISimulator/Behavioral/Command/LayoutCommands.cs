@@ -23,16 +23,16 @@ namespace CrossPlatformUISimulator.Behavioral.Command
 
         public void Execute()
         {
-            // Сохраняем предыдущее состояние для отката
+            
             if (_container is IOriginator originator)
             {
                 _backupState = originator.CreateMemento();
             }
 
-            // Рассчитываем новые границы изолированно от дерева
+            
             var calculatedBounds = _container.CalculateLayout(_context);
 
-            // Применяем вычисленный макет
+            
             foreach (var child in _container.Children)
             {
                 if (calculatedBounds.TryGetValue(child.Id, out var newBounds))
@@ -41,10 +41,10 @@ namespace CrossPlatformUISimulator.Behavioral.Command
                 }
             }
 
-            // Потокобезопасно подменяем стратегию
+            
             _container.SetLayoutStrategy(_newStrategy);
 
-            // Публикация уведомления в систему Observer
+            
             _container.Notify(new UIStateChangeData("LayoutRecalculated", "OldLayout", _newStrategy.GetType().Name, System.DateTime.UtcNow));
         }
 

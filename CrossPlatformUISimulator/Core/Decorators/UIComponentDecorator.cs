@@ -56,7 +56,7 @@ namespace CrossPlatformUISimulator.Core.Decorators
 
         public IUIComponent GetWrappedComponent() => WrappedComponent;
 
-        // Метод Visitor
+        
         public virtual void Accept(IUIComponentVisitor visitor)
         {
             visitor.Visit(this);

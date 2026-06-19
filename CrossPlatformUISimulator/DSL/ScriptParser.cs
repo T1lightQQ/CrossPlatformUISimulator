@@ -3,7 +3,7 @@ using CrossPlatformUISimulator.Common;
 
 namespace CrossPlatformUISimulator.DSL
 {
-    // Синтаксический анализатор (Парсер грамматики)
+   
     public class ScriptParser
     {
         private readonly List<Token> _tokens;
@@ -27,8 +27,8 @@ namespace CrossPlatformUISimulator.DSL
 
                 if (_tokens[_current].Type == TokenType.Arrow)
                 {
-                    _current++; // пропуск ->
-                    _current++; // пропуск EXECUTE
+                    _current++;
+                    _current++;
                     return new PipelineExpression(new SelectExpression(selector, where), ParseExecute());
                 }
                 return new SelectExpression(selector, where);

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using CrossPlatformUISimulator.Abstractions;
-using CrossPlatformUISimulator.Core.Decorators; // Для работы с декораторами
+using CrossPlatformUISimulator.Core.Decorators; 
 
 namespace CrossPlatformUISimulator.Behavioral.Iterator
 {
@@ -33,11 +33,11 @@ namespace CrossPlatformUISimulator.Behavioral.Iterator
             {
                 var node = _stack.Pop();
 
-                // Защита: Если перед нами неинициализированный прокси, не идем вглубь
+                
                 if (node is Core.Proxies.ILazyComponentProxy proxy && !proxy.IsMaterialized)
                     continue;
 
-                // Разворачиваем декораторы, заглядывая внутрь
+                
                 if (node is UIComponentDecorator decorator)
                 {
                     _stack.Push(decorator.GetWrappedComponent());

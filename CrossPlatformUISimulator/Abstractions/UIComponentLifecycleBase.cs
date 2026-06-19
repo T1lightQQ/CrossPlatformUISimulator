@@ -3,9 +3,7 @@ using CrossPlatformUISimulator.Common;
 
 namespace CrossPlatformUISimulator.Abstractions
 {
-    // Часть 32: Каркас процесса с жестко зафиксированной последовательностью шагов
-    // Внимание: Данный жизненный цикл не является потокобезопасным из соображений производительности. 
-    // Синхронизация вызовов должна обеспечиваться вызывающим потоком.
+    
     public abstract class UIComponentLifecycleBase
     {
         protected readonly IUIComponent TargetComponent;
@@ -15,7 +13,7 @@ namespace CrossPlatformUISimulator.Abstractions
             TargetComponent = targetComponent ?? throw new ArgumentNullException(nameof(targetComponent));
         }
 
-        // Исправлено: убран модификатор sealed. Метод не virtual, поэтому переопределить его и так нельзя.
+        
         public void ExecuteLifecycle(UIContext ctx)
         {
             Initialize(ctx);
@@ -45,14 +43,14 @@ namespace CrossPlatformUISimulator.Abstractions
         }
 
         protected abstract void Initialize(UIContext ctx);
-        protected virtual void LoadResources(UIContext ctx) { /* Базовый пустой хук */ }
-        protected virtual void ApplyTheme(UIContext ctx) { /* Базовый пустой хук */ }
+        protected virtual void LoadResources(UIContext ctx) {  }
+        protected virtual void ApplyTheme(UIContext ctx) {  }
         protected abstract bool Validate(UIContext ctx);
-        protected virtual void OnValidationFailed(UIContext ctx) { /* Хук обработки ошибок валидации */ }
-        protected virtual void PreRender(UIContext ctx) { /* Хук подготовки рендеринга */ }
+        protected virtual void OnValidationFailed(UIContext ctx) {  }
+        protected virtual void PreRender(UIContext ctx) {  }
         protected abstract void Render(UIContext ctx);
-        protected virtual void PostRender(UIContext ctx) { /* Хук пост-обработки изображений */ }
-        protected virtual void Cleanup(UIContext ctx) { /* Базовый хук очистки памяти */ }
+        protected virtual void PostRender(UIContext ctx) {  }
+        protected virtual void Cleanup(UIContext ctx) {  }
 
         private void NotifyStep(string stepName, UIContext ctx)
         {

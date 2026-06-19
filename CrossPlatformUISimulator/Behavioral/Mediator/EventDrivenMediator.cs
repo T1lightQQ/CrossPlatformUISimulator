@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using CrossPlatformUISimulator.Common;
 using CrossPlatformUISimulator.Abstractions;
-using CrossPlatformUISimulator.Infrastructure; // Для TelemetrySingleton
+using CrossPlatformUISimulator.Infrastructure; 
 
 namespace CrossPlatformUISimulator.Behavioral.Mediator
 {
@@ -45,7 +45,7 @@ namespace CrossPlatformUISimulator.Behavioral.Mediator
 
         public void Notify(IUIComponent sender, UIEvent @event)
         {
-            // Пропускаем событие через цепочку обязанностей (Chain of Responsibility)
+            
             if (_validator != null && !_validator.Validate(@event)) return;
 
             List<Subscription> targets;
@@ -54,10 +54,10 @@ namespace CrossPlatformUISimulator.Behavioral.Mediator
                 targets = new List<Subscription>(_subs);
             }
 
-            // Делегируем маршрутизацию стратегии роутинга
+            
             _router.Route(@event, targets);
 
-            // Запись в синглтон телеметрии (создадим на следующем шаге)
+            
             TelemetrySingleton.Instance.LogEvent("Dispatched", $"Event {@event.EventType} from {sender.Id}");
         }
     }

@@ -5,7 +5,7 @@ using CrossPlatformUISimulator.Abstractions;
 
 namespace CrossPlatformUISimulator.Infrastructure
 {
-    // Конкретная реализация легковеса
+    
     public class UIStyleFlyweightImpl : IUIStyleFlyweight
     {
         public StyleKey Key { get; }
@@ -21,7 +21,7 @@ namespace CrossPlatformUISimulator.Infrastructure
         public UIStyleFlyweightImpl(StyleKey key) => Key = key;
     }
 
-    // Паттерн Flyweight (Легковес) для кэширования одинаковых стилей
+    
     public class FlyweightFactory
     {
         public static FlyweightFactory Instance { get; } = new FlyweightFactory();

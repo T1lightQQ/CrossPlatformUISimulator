@@ -12,7 +12,7 @@ namespace CrossPlatformUISimulator.Behavioral.Iterator
         public IUIComponentIterator CreateBfs(IUIComponent root, Func<IUIComponent, bool>? predicate = null) =>
             new BreadthFirstIterator(root);
 
-        // Фабричный метод итератора, который видит "Прокси" и не триггерит их тяжелую загрузку
+       
         public IUIComponentIterator CreateProxyAware(IUIComponent root) =>
             new DepthFirstIterator(root, c => !(c is ILazyComponentProxy p && !p.IsMaterialized));
     }

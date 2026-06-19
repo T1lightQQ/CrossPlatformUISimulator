@@ -10,13 +10,13 @@ namespace CrossPlatformUISimulator.Core.Decorators
 
         public override void Render(IRenderingContext ctx)
         {
-            // Симуляция логики отрисовки декоративной рамки вокруг компонента
+            
             base.Render(ctx);
         }
 
         public override IUIComponent Clone()
         {
-            // Исправлено: использование WrappedComponent из базового класса UIComponentDecorator
+            
             return new BorderDecorator(WrappedComponent.Clone());
         }
     }

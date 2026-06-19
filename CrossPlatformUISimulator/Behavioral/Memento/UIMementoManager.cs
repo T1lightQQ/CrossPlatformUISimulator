@@ -3,7 +3,7 @@ using CrossPlatformUISimulator.Abstractions;
 
 namespace CrossPlatformUISimulator.Behavioral.Memento
 {
-    // Класс Опекун (Caretaker) для работы с историей снимков
+    
     public class UIMementoManager
     {
         private readonly List<(string Label, IMemento Snapshot)> _history = new();

@@ -42,7 +42,7 @@ namespace CrossPlatformUISimulator.Facade
             }
         }
 
-        // ЧАСТЬ 34: Сервисный запуск посетителей из единого диспетчера
+        
         public void RunVisitor(IUIComponentVisitor visitor)
         {
             Root.Accept(visitor);

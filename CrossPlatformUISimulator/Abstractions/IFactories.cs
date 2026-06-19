@@ -4,7 +4,7 @@ using CrossPlatformUISimulator.Common;
 
 namespace CrossPlatformUISimulator.Abstractions
 {
-    // Абстрактные фабрики (Abstract Factory)
+    
     public interface IThemeFactory
     {
         IRenderingStrategy CreateRenderingStrategy();
@@ -16,7 +16,7 @@ namespace CrossPlatformUISimulator.Abstractions
         IUIComponent CreateLabel(string id, Rectangle bounds, IUIStyleFlyweight flyweight);
     }
 
-    // Паттерн Iterator
+    
     public interface IUIComponentIterator : IEnumerator
     {
     }

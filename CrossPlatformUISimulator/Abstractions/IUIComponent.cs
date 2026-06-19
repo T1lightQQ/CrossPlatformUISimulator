@@ -24,7 +24,7 @@ namespace CrossPlatformUISimulator.Abstractions
         void SetMediator(IUIComponentMediator mediator);
         T? FindById<T>(string id) where T : class, IUIComponent;
 
-        // ЧАСТЬ 34: Точка входа для внешних алгоритмов анализа
+        
         void Accept(IUIComponentVisitor visitor);
     }
 

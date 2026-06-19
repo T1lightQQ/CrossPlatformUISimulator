@@ -130,7 +130,7 @@ namespace CrossPlatformUISimulator.Core.Components
             }
         }
 
-        // ЧАСТЬ 34: Двойная диспетчеризация для контейнера панелей
+        
         public override void Accept(IUIComponentVisitor visitor)
         {
             visitor.Visit(this);

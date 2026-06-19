@@ -5,7 +5,7 @@ using CrossPlatformUISimulator.Common;
 
 namespace CrossPlatformUISimulator.Behavioral.Strategy
 {
-    // 1. Последовательное вертикальное размещение элементов (Stack)
+    
     public record StackLayoutStrategy : ILayoutStrategy
     {
         public IReadOnlyDictionary<string, Rectangle> CalculateBounds(IContainerComponent container, LayoutContext context)
@@ -16,7 +16,7 @@ namespace CrossPlatformUISimulator.Behavioral.Strategy
 
             foreach (var child in container.Children)
             {
-                // Масштабируем с учётом DPI симулятора
+               
                 int calculatedHeight = (int)(child.BoundingBox.Height * context.DpiScale);
                 int calculatedWidth = Math.Min((int)(child.BoundingBox.Width * context.DpiScale), availableWidth);
 
@@ -28,7 +28,7 @@ namespace CrossPlatformUISimulator.Behavioral.Strategy
         }
     }
 
-    // 2. Размещение по строкам и столбцам (Упрощенная Grid-сетка с равными весами)
+   
     public record GridLayoutStrategy : ILayoutStrategy
     {
         private readonly int _columns;
@@ -46,7 +46,7 @@ namespace CrossPlatformUISimulator.Behavioral.Strategy
 
             int usableWidth = context.AvailableWidth - (context.Padding * 2);
             int cellWidth = (usableWidth - (context.Spacing * (_columns - 1))) / _columns;
-            int cellHeight = 60; // Фиксированная базовая высота ячейки для тестов
+            int cellHeight = 60; 
 
             for (int i = 0; i < children.Count; i++)
             {
@@ -63,7 +63,7 @@ namespace CrossPlatformUISimulator.Behavioral.Strategy
         }
     }
 
-    // 3. Свободное размещение по абсолютным координатам
+    
     public record FreeFormLayoutStrategy : ILayoutStrategy
     {
         public IReadOnlyDictionary<string, Rectangle> CalculateBounds(IContainerComponent container, LayoutContext context)
@@ -71,7 +71,7 @@ namespace CrossPlatformUISimulator.Behavioral.Strategy
             var result = new Dictionary<string, Rectangle>();
             foreach (var child in container.Children)
             {
-                // Просто переносим текущие координаты с учётом коэффициента DPI
+                
                 var current = child.BoundingBox;
                 result[child.Id] = new Rectangle(
                     (int)(current.X * context.DpiScale),

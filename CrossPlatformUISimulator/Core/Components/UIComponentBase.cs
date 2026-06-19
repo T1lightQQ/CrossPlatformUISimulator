@@ -66,11 +66,11 @@ namespace CrossPlatformUISimulator.Core.Components
                 oldState = _currentState;
                 oldState.Exit(this);
 
-                _currentState = newState; // Смена состояния под атомарной блокировкой
+                _currentState = newState; 
                 _currentState.Enter(this);
             }
 
-            // Нотификация наблюдателей вынесена за пределы lock во избежание взаимных блокировок (Deadlocks)
+            
             _stateSubject.Notify(new UIStateChangeData("ComponentState", oldState.StateName, newState.StateName, DateTime.UtcNow));
         }
 
@@ -105,7 +105,7 @@ namespace CrossPlatformUISimulator.Core.Components
                 Enabled = state.Enabled;
                 Flyweight = FlyweightFactory.Instance.GetFlyweight(state.Style);
 
-                // Восстановление полиморфного состояния на базе сохраненного имени
+                
                 IComponentState TargetState = state.StateName switch
                 {
                     "NormalState" => NormalState.Instance,
@@ -124,7 +124,7 @@ namespace CrossPlatformUISimulator.Core.Components
         public virtual void Dispose()
         {
             Mediator?.Unregister(this);
-            _stateSubject.ClearAll(); // Автоматический разрыв связей при уничтожении
+            _stateSubject.ClearAll(); 
         }
     }
 }

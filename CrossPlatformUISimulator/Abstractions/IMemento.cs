@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator.Abstractions
 {
-    // Opaque Token (Маркерный интерфейс "хранителя" без публичных методов)
+    
     public interface IMemento { }
 
-    // Интерфейс создателя состояния (Originator)
+    
     public interface IOriginator
     {
         IMemento CreateMemento();

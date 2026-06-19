@@ -3,7 +3,7 @@ using CrossPlatformUISimulator.Abstractions;
 
 namespace CrossPlatformUISimulator.Behavioral.Command
 {
-    // Команда перемещения
+    
     public class MoveComponentCommand : IUICommand
     {
         private readonly IUIComponent _component;
@@ -27,7 +27,7 @@ namespace CrossPlatformUISimulator.Behavioral.Command
         public void Undo() => _component.SetPosition(_oldPos);
     }
 
-    // Команда смены темы/оформления
+    
     public class ApplyThemeCommand : IUICommand
     {
         private readonly IUIComponent _component;
@@ -45,7 +45,7 @@ namespace CrossPlatformUISimulator.Behavioral.Command
         public void Execute()
         {
             _oldStyle = _component.Flyweight;
-            // Подгружаем легковес через глобальную фабрику инфраструктуры
+            
             _component.Flyweight = Infrastructure.FlyweightFactory.Instance.GetFlyweight(_newStyle);
         }
 
@@ -55,7 +55,7 @@ namespace CrossPlatformUISimulator.Behavioral.Command
         }
     }
 
-    // Паттерн Макрокоманда (Компоновщик над командами)
+    
     public class MacroCommand : IUICommand
     {
         private readonly IUICommand[] _commands;

@@ -31,7 +31,7 @@ namespace CrossPlatformUISimulator.Behavioral.Observer
         {
             if (data.NewValue == "ErrorState")
             {
-                // Запуск Chain of Responsibility при фиксации сбоя в состоянии
+                
                 var mockEvent = new UIEvent(Guid.NewGuid(), DateTime.UtcNow, "State_Error_Validate", component.Id);
                 _validationChain.Validate(mockEvent);
             }
@@ -45,7 +45,7 @@ namespace CrossPlatformUISimulator.Behavioral.Observer
     {
         public void OnStateChange(IUIComponent component, UIStateChangeData data)
         {
-            // Синхронизация визуального оформления при смене состояний
+            
             if (data.NewValue == "LoadingState")
             {
                 component.Flyweight = FlyweightFactory.Instance.GetFlyweight(new StyleKey("Arial", 11, 100, 100, 100));

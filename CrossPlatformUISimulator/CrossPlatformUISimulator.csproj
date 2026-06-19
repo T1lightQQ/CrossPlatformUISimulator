@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <Compile Remove="AppHost.cs" />
+    <Compile Remove="Behavioral\Memento\TreeMemento.cs" />
     <Compile Remove="Builder.cs" />
     <Compile Remove="ChainOfResponsibility.cs" />
     <Compile Remove="CheckpointSimulationRunner.cs" />

@@ -5,7 +5,7 @@ using CrossPlatformUISimulator.Facade;
 
 namespace CrossPlatformUISimulator.DSL
 {
-    // Контекст выполнения для интерпретатора
+    
     public class UIInterpreterContext
     {
         public UISystemFacade Facade { get; }

@@ -12,7 +12,7 @@ namespace CrossPlatformUISimulator.Behavioral.Visitor
     // Обоснование рекурсивного обхода: Посетитель самостоятельно управляет вызовами Accept для Children.
     // Это изолирует структуру Composite от логики фильтрации (например, пропуск скрытых веток) внутри алгоритмов.
 
-    // 1. Посетитель сбора метрик и аллокаций
+    
     public class MetricsCollectorVisitor : IUIComponentVisitor
     {
         private int _totalNodes;
@@ -25,7 +25,7 @@ namespace CrossPlatformUISimulator.Behavioral.Visitor
 
         public void Visit(LabelComponent label)
         {
-            // Увеличиваем счетчик узлов (вызов скрытого метода или прямая инкрементация private-поля)
+            
             System.Reflection.FieldInfo? field = typeof(MetricsCollectorVisitor).GetField("_totalNodes", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             if (field != null) field.SetValue(this, (int)field.GetValue(this)! + 1);
         }
@@ -43,7 +43,7 @@ namespace CrossPlatformUISimulator.Behavioral.Visitor
             var impl = panel.Flyweight as UIStyleFlyweightImpl;
             if (impl != null) _distinctStyles.Add(impl.Key.FontName);
 
-            // Рекурсивный спуск по дочерним элементам Composite
+            
             foreach (var child in panel.Children)
             {
                 child.Accept(this);
@@ -52,7 +52,7 @@ namespace CrossPlatformUISimulator.Behavioral.Visitor
 
         public void Visit(UIComponentDecorator decorator)
         {
-            // Декоратор учитывается как мета-узел аналитики
+            
             _totalNodes++;
         }
 
@@ -67,7 +67,7 @@ namespace CrossPlatformUISimulator.Behavioral.Visitor
         }
     }
 
-    // 2. Посетитель генерации Accessibility-дерева для экранных дикторов (Screen Readers)
+    
     public class AccessibilityTreeVisitor : IUIComponentVisitor
     {
         public List<AccessibleNode> AccessibleNodes { get; } = new();
@@ -99,11 +99,11 @@ namespace CrossPlatformUISimulator.Behavioral.Visitor
             }
         }
 
-        public void Visit(UIComponentDecorator decorator) { /* Пропускаем обертки */ }
-        public void Visit(VirtualComponentProxy proxy) { /* Пропускаем неструктурированные прокси */ }
+        public void Visit(UIComponentDecorator decorator) {  }
+        public void Visit(VirtualComponentProxy proxy) {  }
     }
 
-    // 3. Посетитель автоматической валидации инвариантов графа зависимостей
+    
     public class DependencyValidatorVisitor : IUIComponentVisitor
     {
 

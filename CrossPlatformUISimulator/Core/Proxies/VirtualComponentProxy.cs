@@ -4,7 +4,7 @@ using CrossPlatformUISimulator.Abstractions;
 
 namespace CrossPlatformUISimulator.Core.Proxies
 {
-    // Интерфейс должен лежать строго здесь, чтобы его видели внешние итераторы
+    
     public interface ILazyComponentProxy
     {
         bool IsMaterialized { get; }

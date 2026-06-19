@@ -4,7 +4,7 @@ using CrossPlatformUISimulator.Common;
 
 namespace CrossPlatformUISimulator.Behavioral.State
 {
-    // Нормальное рабочее состояние системы
+    
     public record NormalState : IComponentState
     {
         public static NormalState Instance { get; } = new();
@@ -17,7 +17,7 @@ namespace CrossPlatformUISimulator.Behavioral.State
 
         public void HandleClick(IUIComponent context)
         {
-            // Перенаправление стандартного клика через Медиатор
+            
             if (context is Core.Components.ButtonComponent btn)
             {
                 btn.SimulateClick();
@@ -26,11 +26,11 @@ namespace CrossPlatformUISimulator.Behavioral.State
 
         public void HandleRender(IUIComponent context, IRenderingContext ctx)
         {
-            // Рендеринг в штатном режиме
+            
         }
     }
 
-    // Состояние загрузки (Блокировка ввода, NoOp обработка)
+    
     public record LoadingState : IComponentState
     {
         public static LoadingState Instance { get; } = new();
@@ -43,16 +43,16 @@ namespace CrossPlatformUISimulator.Behavioral.State
 
         public void HandleClick(IUIComponent context)
         {
-            // NoOp: Клики заблокированы во время выполнения асинхронной операции
+            
         }
 
         public void HandleRender(IUIComponent context, IRenderingContext ctx)
         {
-            // Отрисовка индикатора прогресса (Spinner) поверх элемента
+            
         }
     }
 
-    // Состояние ошибки (Требует сброса через явную команду)
+    
     public record ErrorState : IComponentState
     {
         public static ErrorState Instance { get; } = new();
@@ -76,12 +76,12 @@ namespace CrossPlatformUISimulator.Behavioral.State
 
         public void HandleClick(IUIComponent context)
         {
-            // Перенаправление клика в лог ошибок
+            
         }
 
         public void HandleRender(IUIComponent context, IRenderingContext ctx)
         {
-            // Применение ярко-красной цветовой палитры аварийного режима
+            
         }
     }
 }

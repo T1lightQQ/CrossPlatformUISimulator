@@ -119,13 +119,13 @@ namespace CrossPlatformUISimulator.Infrastructure
             Console.WriteLine($"[Benchmark] Издержки наследования в Template Method: +{overhead:F2}% (Ожидается <= 3%)");
         }
 
-        // ЧАСТЬ 35: Замеры накладных расходов ручного Visitor против C# Pattern Matching
+        
         private static void BenchmarkVisitorVsPatternMatching()
         {
             int iterations = 5000;
             var style = FlyweightFactory.Instance.GetFlyweight(new StyleKey("Arial", 12, 0, 0, 0));
 
-            // Генерируем тестовую цепочку элементов
+            
             var list = new List<IUIComponent>();
             for (int i = 0; i < 100; i++)
             {
@@ -134,7 +134,7 @@ namespace CrossPlatformUISimulator.Infrastructure
 
             var visitor = new MetricsCollectorVisitor();
 
-            // 1. Тест классического паттерна Visitor
+           
             var swVisitor = Stopwatch.StartNew();
             for (int i = 0; i < iterations; i++)
             {
@@ -145,7 +145,7 @@ namespace CrossPlatformUISimulator.Infrastructure
             }
             swVisitor.Stop();
 
-            // 2. Тест Pattern Matching (Type Switch)
+            
             var swPattern = Stopwatch.StartNew();
             int patternCounter = 0;
             for (int i = 0; i < iterations; i++)

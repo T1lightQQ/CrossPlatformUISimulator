@@ -25,7 +25,7 @@ namespace CrossPlatformUISimulator.Behavioral.Observer
                 var newArr = new IUIStateObserver[oldArr.Length + 1];
                 Array.Copy(oldArr, newArr, oldArr.Length);
                 newArr[^1] = observer;
-                _observers = newArr; // Атомарная замена ссылки
+                _observers = newArr; 
             }
         }
 
@@ -41,13 +41,13 @@ namespace CrossPlatformUISimulator.Behavioral.Observer
                 var newArr = new IUIStateObserver[oldArr.Length - 1];
                 Array.Copy(oldArr, 0, newArr, 0, idx);
                 Array.Copy(oldArr, idx + 1, newArr, idx, oldArr.Length - idx - 1);
-                _observers = newArr; // Атомарная замена ссылки
+                _observers = newArr; 
             }
         }
 
         public void Notify(UIStateChangeData data)
         {
-            // Чтение volatile ссылки исключает необходимость блокировки во время итерации (защита от Deadlock)
+            
             var currentObservers = Volatile.Read(ref _observers);
 
             foreach (var observer in currentObservers)

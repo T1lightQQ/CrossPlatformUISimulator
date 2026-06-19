@@ -20,16 +20,16 @@ namespace CrossPlatformUISimulator.Behavioral.Mediator
         }
     }
 
-    // Конкретный обработчик: Защита от спам-кликов
+   
     public class SpamProtectionHandler : BaseValidationHandler
     {
         public override bool Validate(UIEvent @event)
         {
             if (@event.EventType == "SpamClick")
             {
-                return false; // Блокируем событие, прерываем цепочку
+                return false; 
             }
-            return base.Validate(@event); // Идем дальше
+            return base.Validate(@event); 
         }
     }
 }

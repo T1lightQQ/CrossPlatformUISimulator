@@ -2,7 +2,7 @@
 
 namespace CrossPlatformUISimulator.Infrastructure
 {
-    // Паттерн Singleton (Одиночка) с потокобезопасной инициализацией
+    
     public class TelemetrySingleton
     {
         private static readonly TelemetrySingleton _instance = new TelemetrySingleton();
@@ -10,7 +10,7 @@ namespace CrossPlatformUISimulator.Infrastructure
 
         public static TelemetrySingleton Instance => _instance;
 
-        private TelemetrySingleton() { } // Закрытый конструктор
+        private TelemetrySingleton() { } 
 
         public void LogEvent(string status, string details)
         {

@@ -21,7 +21,7 @@ namespace CrossPlatformUISimulator.Common
         Cupertino
     }
 
-    // Токены лексического анализатора для нашего UI-DSL
+    
     public enum TokenType
     {
         Select,

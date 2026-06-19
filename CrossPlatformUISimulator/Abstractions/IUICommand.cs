@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator.Abstractions
 {
-    // Паттерн Command для инкрементальных дельта-изменений
+    
     public interface IUICommand
     {
         void Execute();
