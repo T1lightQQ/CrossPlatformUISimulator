@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator
 {
-    // Реализация разделяемой структуры Flyweight
     public record UIStyleFlyweight : IUIStyleFlyweight
     {
         public Guid StyleId { get; init; } = Guid.NewGuid();
@@ -16,7 +15,6 @@ namespace CrossPlatformUISimulator
         public byte[]? IconBytes { get; init; }
     }
 
-    // Потокобезопасная фабрика Flyweight без ручных lock
     public class FlyweightFactory
     {
         private static readonly Lazy<FlyweightFactory> _instance = new(() => new FlyweightFactory());
@@ -44,7 +42,7 @@ namespace CrossPlatformUISimulator
             {
                 Font = new FontMetrics(key.FontName, key.FontSize),
                 Palette = new ColorPalette(new Color(key.R, key.G, key.B), new Color(0, 0, 0), new Color(255, 255, 255)),
-                IconBytes = new byte[2048] // Имитация тяжелого растрового ассета иконки
+                IconBytes = new byte[1024]
             };
 
             if (_pool.TryAdd(key, newStyle))
@@ -54,7 +52,6 @@ namespace CrossPlatformUISimulator
                 return newStyle;
             }
 
-            Interlocked.Increment(ref _hits);
             return _pool[key];
         }
 
@@ -82,13 +79,7 @@ namespace CrossPlatformUISimulator
     {
         public IUIComponent CreateWidget(WidgetConfig config, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
         {
-            // Если flyweight не передан (вызов из прокси до материализации), создаем временную пустышку
-            var style = flyweight ?? new UIStyleFlyweight
-            {
-                Font = new FontMetrics(config.Style.FontName, config.Style.FontSize),
-                Palette = new ColorPalette(new Color(0, 0, 0), new Color(0, 0, 0), new Color(0, 0, 0))
-            };
-
+            var style = flyweight ?? FlyweightFactory.Instance.GetFlyweight(config.Style);
             return config.Type switch
             {
                 WidgetType.Button => new ButtonComponent(config.Id, config.Bounds, "Кнопка", strategy, style),

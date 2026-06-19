@@ -25,13 +25,15 @@ namespace CrossPlatformUISimulator
     public record FontMetrics(string Name, int Size);
     public record ColorPalette(Color Background, Color Border, Color Text);
 
-    // Ключ для уникальной идентификации разделяемого состояния Flyweight
     public record struct StyleKey(string FontName, int FontSize, byte R, byte G, byte B) : IEquatable<StyleKey>;
 
     public interface IRenderingContext { }
     public class DefaultRenderingContext : IRenderingContext { }
 
     public record RenderCacheKey(Rectangle Bounds, string ComponentId);
+
+    // Спецификация UI-событий для паттерна Chain of Responsibility
+    public record UIEvent(string EventType, string TargetComponentId, object Payload, DateTime Timestamp);
 
     public record DialogPreset
     {

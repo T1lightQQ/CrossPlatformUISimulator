@@ -11,15 +11,14 @@ namespace CrossPlatformUISimulator
         T Clone();
     }
 
-    // Расширенный интерфейс UI-компонента, разделяющий внутреннее и внешнее состояние
     public interface IUIComponent : IPrototypical<IUIComponent>
     {
         string Id { get; }
-        Rectangle BoundingBox { get; set; } // Изменяемый Extrinsic State
-        string TextContent { get; set; }   // Изменяемый Extrinsic State
-        bool Enabled { get; set; }         // Изменяемый Extrinsic State
-        int ZIndex { get; set; }           // Изменяемый Extrinsic State
-        IUIStyleFlyweight Flyweight { get; } // Ссылка на Intrinsic State
+        Rectangle BoundingBox { get; set; }
+        string TextContent { get; set; }
+        bool Enabled { get; set; }
+        int ZIndex { get; set; }
+        IUIStyleFlyweight Flyweight { get; }
 
         void Render(IRenderingContext ctx);
         void SetPosition(Point position);
@@ -33,9 +32,9 @@ namespace CrossPlatformUISimulator
         IReadOnlyList<IUIComponent> Children { get; }
         void AddChild(IUIComponent child);
         void RemoveChild(IUIComponent child);
+        void ReplaceChild(string id, IUIComponent newChild); // Требуется для динамической инжекции декораторов командами
     }
 
-    // Легковесный неизменяемый стиль (Flyweight)
     public interface IUIStyleFlyweight
     {
         Guid StyleId { get; }
@@ -44,12 +43,17 @@ namespace CrossPlatformUISimulator
         byte[]? IconBytes { get; }
     }
 
-    // Контракт для ленивых виртуальных прокси-серверов
     public interface ILazyComponentProxy : IUIComponent
     {
         bool IsMaterialized { get; }
         void Materialize();
         IUIComponent GetRealSubject();
+    }
+
+    public interface IProtectionProxy : IUIComponent
+    {
+        bool IsLocked { get; }
+        void LockComponent();
     }
 
     public interface IRenderingStrategy
@@ -94,9 +98,25 @@ namespace CrossPlatformUISimulator
 
     public interface IUISystemFacade
     {
+        IContainerComponent RootTree { get; }
         IContainerComponent CreateDialog(DialogPreset preset, ThemeType theme);
         void ApplyGlobalTheme(ThemeType theme);
         void RenderAllToContext(IRenderingContext ctx);
         void LogCurrentMetrics();
+    }
+
+    // Паттерн Chain of Responsibility
+    public interface IUIEventHandler
+    {
+        IUIEventHandler SetNext(IUIEventHandler next);
+        bool Handle(UIEvent @event);
+    }
+
+    // Паттерн Command
+    public interface IUICommand
+    {
+        void Execute();
+        void Undo();
+        string Description { get; }
     }
 }

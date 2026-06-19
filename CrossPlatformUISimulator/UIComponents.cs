@@ -11,10 +11,9 @@ namespace CrossPlatformUISimulator
     {
         protected IRenderingStrategy _renderingStrategy;
 
-        public IUIStyleFlyweight Flyweight { get; set; } // Разделяемое внутреннее состояние
+        public IUIStyleFlyweight Flyweight { get; set; }
         public string Id { get; protected set; }
 
-        // Внешние состояния (Extrinsic States)
         public Rectangle BoundingBox { get; set; }
         public string TextContent { get; set; } = "";
         public bool Enabled { get; set; } = true;
@@ -60,8 +59,14 @@ namespace CrossPlatformUISimulator
                 }
                 else if (current is ILazyComponentProxy proxy)
                 {
-                    var real = proxy.GetRealSubject();
-                    stack.Push(real);
+                    if (proxy.IsMaterialized)
+                    {
+                        stack.Push(proxy.GetRealSubject());
+                    }
+                }
+                else if (current is IProtectionProxy protectionProxy)
+                {
+                    stack.Push(protectionProxy.FindById<IUIComponent>(id)!);
                 }
                 else if (current is IContainerComponent container)
                 {
@@ -115,11 +120,7 @@ namespace CrossPlatformUISimulator
         public SliderComponent(string id, Rectangle bounds, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
             : base(id, bounds, strategy, flyweight) { }
 
-        public override void Render(IRenderingContext ctx)
-        {
-            _renderingStrategy.DrawBackground(BoundingBox, Flyweight.Palette.Background);
-        }
-
+        public override void Render(IRenderingContext ctx) => _renderingStrategy.DrawBackground(BoundingBox, Flyweight.Palette.Background);
         public override IUIComponent Clone() => new SliderComponent(Id, BoundingBox, _renderingStrategy, Flyweight) { Value = this.Value };
     }
 
@@ -133,6 +134,18 @@ namespace CrossPlatformUISimulator
 
         public void AddChild(IUIComponent child) => _children.Add(child);
         public void RemoveChild(IUIComponent child) => _children.Remove(child);
+
+        public void ReplaceChild(string id, IUIComponent newChild)
+        {
+            for (int i = 0; i < _children.Count; i++)
+            {
+                if (_children[i].Id == id)
+                {
+                    _children[i] = newChild;
+                    return;
+                }
+            }
+        }
 
         public override void Render(IRenderingContext ctx)
         {
@@ -151,7 +164,7 @@ namespace CrossPlatformUISimulator
     // --- ДЕКОРАТОРЫ ---
     public abstract class UIComponentDecorator : IUIComponent, IContainerComponent
     {
-        protected readonly IUIComponent _component;
+        protected IUIComponent _component;
         protected UIComponentDecorator(IUIComponent component) => _component = component;
 
         public virtual string Id => _component.Id;
@@ -171,24 +184,26 @@ namespace CrossPlatformUISimulator
         }
 
         public IUIComponent GetWrappedComponent() => _component;
+        public void SetWrappedComponent(IUIComponent component) => _component = component;
         public abstract IUIComponent Clone();
 
         public IReadOnlyList<IUIComponent> Children => (_component as IContainerComponent)?.Children ?? new List<IUIComponent>().AsReadOnly();
         public void AddChild(IUIComponent child) => (_component as IContainerComponent)?.AddChild(child);
         public void RemoveChild(IUIComponent child) => (_component as IContainerComponent)?.RemoveChild(child);
+        public void ReplaceChild(string id, IUIComponent newChild) => (_component as IContainerComponent)?.ReplaceChild(id, newChild);
     }
 
     public class BorderDecorator : UIComponentDecorator
     {
         public BorderDecorator(IUIComponent component) : base(component) { }
-        public override void Render(IRenderingContext ctx) => _component.Render(ctx);
+        public override void Render(IRenderingContext ctx) => base.Render(ctx);
         public override IUIComponent Clone() => new BorderDecorator(_component.Clone());
     }
 
     public class RenderLogDecorator : UIComponentDecorator
     {
         public RenderLogDecorator(IUIComponent component) : base(component) { }
-        public override void Render(IRenderingContext ctx) => _component.Render(ctx);
+        public override void Render(IRenderingContext ctx) => base.Render(ctx);
         public override IUIComponent Clone() => new RenderLogDecorator(_component.Clone());
     }
 
@@ -206,7 +221,7 @@ namespace CrossPlatformUISimulator
 
             _cacheKey = currentKey;
             _isCacheValid = true;
-            _component.Render(ctx);
+            base.Render(ctx);
         }
 
         public override void SetPosition(Point position)
@@ -243,7 +258,7 @@ namespace CrossPlatformUISimulator
         public string TextContent { get; set; } = "";
         public bool Enabled { get; set; } = true;
         public int ZIndex { get; set; } = 0;
-        public IUIStyleFlyweight Flyweight => _factory.CreateWidget(_config, _strategy, null!).Flyweight; // Быстрый доступ при необходимости
+        public IUIStyleFlyweight Flyweight => FlyweightFactory.Instance.GetFlyweight(_config.Style);
 
         public void Materialize()
         {
@@ -252,7 +267,6 @@ namespace CrossPlatformUISimulator
             {
                 if (_realSubject == null)
                 {
-                    // Получаем общий флайвейт через доменную фабрику при материализации
                     var flyweight = FlyweightFactory.Instance.GetFlyweight(_config.Style);
                     _realSubject = _factory.CreateWidget(_config, _strategy, flyweight);
                     _realSubject.BoundingBox = BoundingBox;
@@ -284,7 +298,7 @@ namespace CrossPlatformUISimulator
         public T? FindById<T>(string id) where T : class, IUIComponent
         {
             if (Id == id && this is T self) return self;
-            Materialize();
+            if (!IsMaterialized) return null; // Ограничение: Команда не должна форсировать загрузку без явного вызова
             return _realSubject!.FindById<T>(id);
         }
 
@@ -310,13 +324,14 @@ namespace CrossPlatformUISimulator
     }
 
     // --- ПАТТЕРН PROXY: PROTECTION PROXY ---
-    public class ProtectionComponentProxy : IUIComponent
+    public class ProtectionComponentProxy : IProtectionProxy
     {
         private readonly IUIComponent _component;
         private bool _isLocked = false;
 
         public ProtectionComponentProxy(IUIComponent component) => _component = component;
 
+        public bool IsLocked => _isLocked;
         public void LockComponent() => _isLocked = true;
 
         public string Id => _component.Id;
@@ -361,7 +376,7 @@ namespace CrossPlatformUISimulator
 
         private void ThrowIfLocked()
         {
-            if (_isLocked) throw new InvalidOperationException("Защитная ошибка прокси: Компонент заблокирован для изменений!");
+            if (_isLocked) throw new InvalidOperationException("Защитная ошибка прокси: Изменение заблокировано.");
         }
     }
 }

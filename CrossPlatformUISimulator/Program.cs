@@ -6,7 +6,7 @@ namespace CrossPlatformUISimulator
     {
         static void Main(string[] args)
         {
-            ScaleTestRunner.RunScaleTests();
+            InteractiveSimulationRunner.RunSimulation();
             Console.ReadLine();
         }
     }
