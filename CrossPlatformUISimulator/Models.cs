@@ -6,16 +6,7 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator
 {
-    public enum WidgetType
-    {
-        Button,
-        Label,
-        Checkbox,
-        Slider,
-        Panel,
-        LegacyRenderer
-    }
-
+    public enum WidgetType { Button, Label, Checkbox, Slider, Panel }
     public enum ThemeType { Fluent, Cupertino }
     public enum DecoratorType { Border, RenderLog, Cached }
 
@@ -24,30 +15,18 @@ namespace CrossPlatformUISimulator
     public record Color(byte R, byte G, byte B);
     public record FontMetrics(string Name, int Size);
     public record ColorPalette(Color Background, Color Border, Color Text);
-
     public record struct StyleKey(string FontName, int FontSize, byte R, byte G, byte B) : IEquatable<StyleKey>;
 
     public interface IRenderingContext { }
     public class DefaultRenderingContext : IRenderingContext { }
 
-    public record RenderCacheKey(Rectangle Bounds, string ComponentId);
-
-    // Спецификация UI-событий для паттерна Chain of Responsibility
     public record UIEvent(string EventType, string TargetComponentId, object Payload, DateTime Timestamp);
 
     public record DialogPreset
     {
         public required string Title { get; init; }
         public required Rectangle Bounds { get; init; }
-        public ThemeType? Theme { get; init; }
-        public DecoratorType[]? Decorators { get; init; }
         public StyleKey Style { get; init; }
-    }
-
-    public record GlobalUiSettings
-    {
-        public required string DefaultTheme { get; init; }
-        public required bool DebugMode { get; init; }
     }
 
     public class WidgetConfig
@@ -58,11 +37,11 @@ namespace CrossPlatformUISimulator
         public required StyleKey Style { get; init; }
     }
 
-    public class BtnConfig
+    // Перечисления лексем для UI-DSL Компилятора
+    public enum TokenType
     {
-        public required string Id { get; init; }
-        public required string Text { get; init; }
-        public required Rectangle Bounds { get; init; }
-        public StyleKey Style { get; init; }
+        Select, Execute, Where, Arrow, Selector, Predicate, Action, EOF
     }
+
+    public record Token(TokenType Type, string Value, int Position);
 }

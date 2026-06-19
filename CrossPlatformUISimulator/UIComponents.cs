@@ -9,119 +9,49 @@ namespace CrossPlatformUISimulator
 {
     public abstract class UIComponentBase : IUIComponent
     {
-        protected IRenderingStrategy _renderingStrategy;
-
-        public IUIStyleFlyweight Flyweight { get; set; }
-        public string Id { get; protected set; }
-
+        protected IRenderingStrategy Strategy;
+        public string Id { get; }
         public Rectangle BoundingBox { get; set; }
         public string TextContent { get; set; } = "";
         public bool Enabled { get; set; } = true;
-        public int ZIndex { get; set; } = 0;
+        public IUIStyleFlyweight Flyweight { get; set; }
 
         protected UIComponentBase(string id, Rectangle bounds, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
         {
             Id = id;
             BoundingBox = bounds;
-            _renderingStrategy = strategy;
+            Strategy = strategy;
             Flyweight = flyweight;
         }
 
         public abstract void Render(IRenderingContext ctx);
-
-        public virtual void SetPosition(Point position)
-        {
-            BoundingBox = new Rectangle(position.X, position.Y, BoundingBox.Width, BoundingBox.Height);
-        }
-
-        public void SwitchRenderingStrategy(IRenderingStrategy newStrategy)
-        {
-            if (_renderingStrategy.StrategyName == "VectorSvg" && newStrategy.StrategyName == "Raster")
-            {
-                throw new InvalidOperationException("Критическая ошибка совместимости рендереров.");
-            }
-            _renderingStrategy = newStrategy;
-        }
+        public void SetPosition(Point pos) => BoundingBox = new Rectangle(pos.X, pos.Y, BoundingBox.Width, BoundingBox.Height);
 
         public T? FindById<T>(string id) where T : class, IUIComponent
         {
-            var stack = new Stack<IUIComponent>();
-            stack.Push(this);
-
-            while (stack.Count > 0)
-            {
-                var current = stack.Pop();
-                if (current.Id == id && current is T target) return target;
-
-                if (current is UIComponentDecorator decorator)
-                {
-                    stack.Push(decorator.GetWrappedComponent());
-                }
-                else if (current is ILazyComponentProxy proxy)
-                {
-                    if (proxy.IsMaterialized)
-                    {
-                        stack.Push(proxy.GetRealSubject());
-                    }
-                }
-                else if (current is IProtectionProxy protectionProxy)
-                {
-                    stack.Push(protectionProxy.FindById<IUIComponent>(id)!);
-                }
-                else if (current is IContainerComponent container)
-                {
-                    for (int i = container.Children.Count - 1; i >= 0; i--)
-                    {
-                        stack.Push(container.Children[i]);
-                    }
-                }
-            }
+            if (Id == id && this is T target) return target;
             return null;
         }
 
         public abstract IUIComponent Clone();
     }
 
-    public class ButtonComponent : UIComponentBase, ILeafComponent
+    public class ButtonComponent : UIComponentBase
     {
-        public ButtonComponent(string id, Rectangle bounds, string text, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
-            : base(id, bounds, strategy, flyweight) => TextContent = text;
-
-        public override void Render(IRenderingContext ctx)
-        {
-            _renderingStrategy.DrawBackground(BoundingBox, Flyweight.Palette.Background);
-            _renderingStrategy.DrawText(TextContent, Flyweight.Font, new Point(BoundingBox.X + 5, BoundingBox.Y + 5), Flyweight.Palette.Text);
-        }
-
-        public override IUIComponent Clone()
-        {
-            var sw = Stopwatch.StartNew();
-            var clone = new ButtonComponent(Id, BoundingBox, TextContent, _renderingStrategy, Flyweight);
-            ApplicationTelemetrySingleton.Instance.LogOperation("Prototype", "Clone", sw.Elapsed, $"Button:{Id}");
-            return clone;
-        }
-    }
-
-    public class LabelComponent : UIComponentBase, ILeafComponent
-    {
-        public LabelComponent(string id, Rectangle bounds, string text, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
-            : base(id, bounds, strategy, flyweight) => TextContent = text;
-
-        public override void Render(IRenderingContext ctx) =>
-            _renderingStrategy.DrawText(TextContent, Flyweight.Font, new Point(BoundingBox.X, BoundingBox.Y), Flyweight.Palette.Text);
-
-        public override IUIComponent Clone() => new LabelComponent(Id, BoundingBox, TextContent, _renderingStrategy, Flyweight);
-    }
-
-    public class SliderComponent : UIComponentBase, ILeafComponent
-    {
-        public int Value { get; set; } = 50;
-
-        public SliderComponent(string id, Rectangle bounds, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
+        public ButtonComponent(string id, Rectangle bounds, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
             : base(id, bounds, strategy, flyweight) { }
 
-        public override void Render(IRenderingContext ctx) => _renderingStrategy.DrawBackground(BoundingBox, Flyweight.Palette.Background);
-        public override IUIComponent Clone() => new SliderComponent(Id, BoundingBox, _renderingStrategy, Flyweight) { Value = this.Value };
+        public override void Render(IRenderingContext ctx) => Strategy.DrawBackground(BoundingBox, Flyweight.Palette.Background);
+        public override IUIComponent Clone() => new ButtonComponent(Id, BoundingBox, Strategy, Flyweight) { Enabled = Enabled, TextContent = TextContent };
+    }
+
+    public class LabelComponent : UIComponentBase
+    {
+        public LabelComponent(string id, Rectangle bounds, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
+            : base(id, bounds, strategy, flyweight) { }
+
+        public override void Render(IRenderingContext ctx) { }
+        public override IUIComponent Clone() => new LabelComponent(Id, BoundingBox, Strategy, Flyweight) { Enabled = Enabled };
     }
 
     public class PanelComponent : UIComponentBase, IContainerComponent
@@ -134,249 +64,81 @@ namespace CrossPlatformUISimulator
 
         public void AddChild(IUIComponent child) => _children.Add(child);
         public void RemoveChild(IUIComponent child) => _children.Remove(child);
-
         public void ReplaceChild(string id, IUIComponent newChild)
         {
             for (int i = 0; i < _children.Count; i++)
             {
-                if (_children[i].Id == id)
-                {
-                    _children[i] = newChild;
-                    return;
-                }
+                if (_children[i].Id == id) { _children[i] = newChild; return; }
             }
         }
 
         public override void Render(IRenderingContext ctx)
         {
-            _renderingStrategy.DrawBackground(BoundingBox, Flyweight.Palette.Background);
             foreach (var child in _children) child.Render(ctx);
         }
 
         public override IUIComponent Clone()
         {
-            var clonedPanel = new PanelComponent(Id, BoundingBox, _renderingStrategy, Flyweight);
-            foreach (var child in _children) clonedPanel.AddChild(child.Clone());
-            return clonedPanel;
+            var clone = new PanelComponent(Id, BoundingBox, Strategy, Flyweight);
+            foreach (var child in _children) clone.AddChild(child.Clone());
+            return clone;
         }
     }
 
-    // --- ДЕКОРАТОРЫ ---
-    public abstract class UIComponentDecorator : IUIComponent, IContainerComponent
+    // --- ДЕКОРАТОР КОМПОНЕНТОВ ---
+    public abstract class UIComponentDecorator : IUIComponent
     {
-        protected IUIComponent _component;
-        protected UIComponentDecorator(IUIComponent component) => _component = component;
+        protected IUIComponent Component;
+        protected UIComponentDecorator(IUIComponent component) => Component = component;
 
-        public virtual string Id => _component.Id;
-        public virtual Rectangle BoundingBox { get => _component.BoundingBox; set => _component.BoundingBox = value; }
-        public virtual string TextContent { get => _component.TextContent; set => _component.TextContent = value; }
-        public virtual bool Enabled { get => _component.Enabled; set => _component.Enabled = value; }
-        public virtual int ZIndex { get => _component.ZIndex; set => _component.ZIndex = value; }
-        public IUIStyleFlyweight Flyweight => _component.Flyweight;
+        public string Id => Component.Id;
+        public Rectangle BoundingBox { get => Component.BoundingBox; set => Component.BoundingBox = value; }
+        public string TextContent { get => Component.TextContent; set => Component.TextContent = value; }
+        public bool Enabled { get => Component.Enabled; set => Component.Enabled = value; }
+        public IUIStyleFlyweight Flyweight => Component.Flyweight;
 
-        public virtual void Render(IRenderingContext ctx) => _component.Render(ctx);
-        public virtual void SetPosition(Point position) => _component.SetPosition(position);
-
-        public virtual T? FindById<T>(string id) where T : class, IUIComponent
-        {
-            if (Id == id && this is T target) return target;
-            return _component.FindById<T>(id);
-        }
-
-        public IUIComponent GetWrappedComponent() => _component;
-        public void SetWrappedComponent(IUIComponent component) => _component = component;
+        public virtual void Render(IRenderingContext ctx) => Component.Render(ctx);
+        public void SetPosition(Point position) => Component.SetPosition(position);
+        public T? FindById<T>(string id) where T : class, IUIComponent => Component.FindById<T>(id);
+        public IUIComponent GetWrappedComponent() => Component;
         public abstract IUIComponent Clone();
-
-        public IReadOnlyList<IUIComponent> Children => (_component as IContainerComponent)?.Children ?? new List<IUIComponent>().AsReadOnly();
-        public void AddChild(IUIComponent child) => (_component as IContainerComponent)?.AddChild(child);
-        public void RemoveChild(IUIComponent child) => (_component as IContainerComponent)?.RemoveChild(child);
-        public void ReplaceChild(string id, IUIComponent newChild) => (_component as IContainerComponent)?.ReplaceChild(id, newChild);
     }
 
     public class BorderDecorator : UIComponentDecorator
     {
         public BorderDecorator(IUIComponent component) : base(component) { }
-        public override void Render(IRenderingContext ctx) => base.Render(ctx);
-        public override IUIComponent Clone() => new BorderDecorator(_component.Clone());
+        public override IUIComponent Clone() => new BorderDecorator(Component.Clone());
     }
 
-    public class RenderLogDecorator : UIComponentDecorator
-    {
-        public RenderLogDecorator(IUIComponent component) : base(component) { }
-        public override void Render(IRenderingContext ctx) => base.Render(ctx);
-        public override IUIComponent Clone() => new RenderLogDecorator(_component.Clone());
-    }
-
-    public class CachedRenderDecorator : UIComponentDecorator
-    {
-        private RenderCacheKey? _cacheKey;
-        private bool _isCacheValid = false;
-
-        public CachedRenderDecorator(IUIComponent component) : base(component) { }
-
-        public override void Render(IRenderingContext ctx)
-        {
-            var currentKey = new RenderCacheKey(BoundingBox, Id);
-            if (_isCacheValid && _cacheKey == currentKey) return;
-
-            _cacheKey = currentKey;
-            _isCacheValid = true;
-            base.Render(ctx);
-        }
-
-        public override void SetPosition(Point position)
-        {
-            _isCacheValid = false;
-            base.SetPosition(position);
-        }
-
-        public override IUIComponent Clone() => new CachedRenderDecorator(_component.Clone());
-    }
-
-    // --- ПАТТЕРН PROXY: VIRTUAL PROXY ---
+    // --- ЛЕНИВЫЙ ВИРТУАЛЬНЫЙ ПРОКСИ ---
     public class VirtualComponentProxy : ILazyComponentProxy
     {
-        private readonly WidgetConfig _config;
-        private readonly IWidgetFactory _factory;
-        private IRenderingStrategy _strategy;
         private IUIComponent? _realSubject;
-        private readonly object _lock = new();
-
-        public bool IsMaterialized => _realSubject != null;
-
-        public VirtualComponentProxy(WidgetConfig config, IWidgetFactory factory, IRenderingStrategy strategy)
-        {
-            _config = config;
-            _factory = factory;
-            _strategy = strategy;
-            Id = config.Id;
-            BoundingBox = config.Bounds;
-        }
-
         public string Id { get; }
+        public bool IsMaterialized => _realSubject != null;
         public Rectangle BoundingBox { get; set; }
         public string TextContent { get; set; } = "";
         public bool Enabled { get; set; } = true;
-        public int ZIndex { get; set; } = 0;
-        public IUIStyleFlyweight Flyweight => FlyweightFactory.Instance.GetFlyweight(_config.Style);
+        public IUIStyleFlyweight Flyweight => _realSubject?.Flyweight!;
+
+        public VirtualComponentProxy(string id, Rectangle bounds)
+        {
+            Id = id;
+            BoundingBox = bounds;
+        }
 
         public void Materialize()
         {
-            if (_realSubject != null) return;
-            lock (_lock)
+            if (_realSubject == null)
             {
-                if (_realSubject == null)
-                {
-                    var flyweight = FlyweightFactory.Instance.GetFlyweight(_config.Style);
-                    _realSubject = _factory.CreateWidget(_config, _strategy, flyweight);
-                    _realSubject.BoundingBox = BoundingBox;
-                    _realSubject.TextContent = TextContent;
-                    _realSubject.Enabled = Enabled;
-                    _realSubject.ZIndex = ZIndex;
-                }
+                _realSubject = new ButtonComponent(Id, BoundingBox, new DummyRasterStrategy(), FlyweightFactory.Instance.GetFlyweight(new StyleKey("Arial", 12, 0, 0, 0)));
             }
         }
 
-        public IUIComponent GetRealSubject()
-        {
-            Materialize();
-            return _realSubject!;
-        }
-
-        public void Render(IRenderingContext ctx)
-        {
-            Materialize();
-            _realSubject!.Render(ctx);
-        }
-
-        public void SetPosition(Point position)
-        {
-            BoundingBox = new Rectangle(position.X, position.Y, BoundingBox.Width, BoundingBox.Height);
-            if (IsMaterialized) _realSubject!.SetPosition(position);
-        }
-
-        public T? FindById<T>(string id) where T : class, IUIComponent
-        {
-            if (Id == id && this is T self) return self;
-            if (!IsMaterialized) return null; // Ограничение: Команда не должна форсировать загрузку без явного вызова
-            return _realSubject!.FindById<T>(id);
-        }
-
-        public IUIComponent Clone()
-        {
-            return new VirtualComponentProxy(_config, _factory, _strategy)
-            {
-                BoundingBox = BoundingBox,
-                TextContent = TextContent,
-                Enabled = Enabled,
-                ZIndex = ZIndex
-            };
-        }
-
-        public void UpdateStrategy(IRenderingStrategy strategy)
-        {
-            _strategy = strategy;
-            if (IsMaterialized && _realSubject is UIComponentBase baseComp)
-            {
-                baseComp.SwitchRenderingStrategy(strategy);
-            }
-        }
-    }
-
-    // --- ПАТТЕРН PROXY: PROTECTION PROXY ---
-    public class ProtectionComponentProxy : IProtectionProxy
-    {
-        private readonly IUIComponent _component;
-        private bool _isLocked = false;
-
-        public ProtectionComponentProxy(IUIComponent component) => _component = component;
-
-        public bool IsLocked => _isLocked;
-        public void LockComponent() => _isLocked = true;
-
-        public string Id => _component.Id;
-        public IUIStyleFlyweight Flyweight => _component.Flyweight;
-
-        public Rectangle BoundingBox
-        {
-            get => _component.BoundingBox;
-            set { ThrowIfLocked(); _component.BoundingBox = value; }
-        }
-        public string TextContent
-        {
-            get => _component.TextContent;
-            set { ThrowIfLocked(); _component.TextContent = value; }
-        }
-        public bool Enabled
-        {
-            get => _component.Enabled;
-            set { ThrowIfLocked(); _component.Enabled = value; }
-        }
-        public int ZIndex
-        {
-            get => _component.ZIndex;
-            set { ThrowIfLocked(); _component.ZIndex = value; }
-        }
-
-        public void Render(IRenderingContext ctx) => _component.Render(ctx);
-        public void SetPosition(Point position) { ThrowIfLocked(); _component.SetPosition(position); }
-
-        public T? FindById<T>(string id) where T : class, IUIComponent
-        {
-            if (Id == id && this is T self) return self;
-            return _component.FindById<T>(id);
-        }
-
-        public IUIComponent Clone()
-        {
-            var clone = new ProtectionComponentProxy(_component.Clone());
-            if (_isLocked) clone.LockComponent();
-            return clone;
-        }
-
-        private void ThrowIfLocked()
-        {
-            if (_isLocked) throw new InvalidOperationException("Защитная ошибка прокси: Изменение заблокировано.");
-        }
+        public IUIComponent GetRealSubject() { Materialize(); return _realSubject!; }
+        public void Render(IRenderingContext ctx) => GetRealSubject().Render(ctx);
+        public void SetPosition(Point pos) => BoundingBox = new Rectangle(pos.X, pos.Y, BoundingBox.Width, BoundingBox.Height);
+        public T? FindById<T>(string id) where T : class, IUIComponent => Id == id ? this as T : _realSubject?.FindById<T>(id);
+        public IUIComponent Clone() => new VirtualComponentProxy(Id, BoundingBox);
     }
 }

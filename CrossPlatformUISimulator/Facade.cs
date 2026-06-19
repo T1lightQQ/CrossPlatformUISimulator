@@ -8,35 +8,34 @@ namespace CrossPlatformUISimulator
 {
     public class UISystemFacade : IUISystemFacade
     {
-        private readonly IWidgetFactory _widgetFactory;
         private readonly IContainerBuilder _builder;
-        private readonly IApplicationTelemetry _telemetry;
-        private IContainerComponent? _rootTree;
-        private IThemeFactory _currentFactory;
+        private readonly CommandManager _commandManager;
+        private IContainerComponent? _root;
 
-        public IContainerComponent RootTree => _rootTree ?? throw new InvalidOperationException("Дерево UI не инициализировано.");
+        public IContainerComponent RootTree => _root ?? throw new InvalidOperationException("Древо компонентов не сформировано.");
 
-        public UISystemFacade(IThemeFactory initialTheme, IWidgetFactory widgetFactory, IContainerBuilder builder, IApplicationTelemetry telemetry)
+        public UISystemFacade(IContainerBuilder builder, CommandManager cmdManager)
         {
-            _currentFactory = initialTheme;
-            _widgetFactory = widgetFactory;
             _builder = builder;
-            _telemetry = telemetry;
+            _commandManager = cmdManager;
         }
 
         public IContainerComponent CreateDialog(DialogPreset preset, ThemeType theme)
         {
-            _currentFactory = theme == ThemeType.Fluent ? new FluentThemeFactory() : new CupertinoThemeFactory();
-            _builder.SetId("RootMainPanel")
-                    .SetBounds(preset.Bounds)
-                    .ConfigureTheme(_currentFactory);
-
-            _rootTree = _builder.Build();
-            return _rootTree;
+            _root = _builder.SetId("MainWindow").SetBounds(preset.Bounds).Build();
+            return _root;
         }
 
-        public void ApplyGlobalTheme(ThemeType theme) { }
-        public void RenderAllToContext(IRenderingContext ctx) => _rootTree?.Render(ctx);
-        public void LogCurrentMetrics() { }
+        public void ExecuteDsl(string script)
+        {
+            var scanner = new Scanner(script);
+            var tokens = scanner.ScanTokens();
+            var parser = new ScriptParser(tokens);
+
+            var astRoot = parser.ParseExpressionTree();
+            var context = new UIInterpreterContext(this, _commandManager, TelemetrySingleton.Instance);
+
+            astRoot.Interpret(context);
+        }
     }
 }
