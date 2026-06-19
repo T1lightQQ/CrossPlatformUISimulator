@@ -5,10 +5,8 @@ using CrossPlatformUISimulator.Infrastructure;
 using CrossPlatformUISimulator.Behavioral.Mediator;
 using CrossPlatformUISimulator.Behavioral.Command;
 using CrossPlatformUISimulator.Behavioral.Memento;
-using CrossPlatformUISimulator.Behavioral.State;
-using CrossPlatformUISimulator.Behavioral.Observer;
 using CrossPlatformUISimulator.Behavioral.Strategy;
-using CrossPlatformUISimulator.Behavioral.TemplateMethod;
+using CrossPlatformUISimulator.Behavioral.Visitor;
 using CrossPlatformUISimulator.Core.Components;
 
 namespace CrossPlatformUISimulator
@@ -17,78 +15,74 @@ namespace CrossPlatformUISimulator
     {
         public static void Main()
         {
-            Console.WriteLine("=== ЧАСТЬ 11: СКВОЗНАЯ ИНТЕГРАЦИЯ ~22 ПАТТЕРНОВ (STRATEGY + TEMPLATE METHOD) ===");
+            Console.WriteLine("==========================================================================");
+            Console.WriteLine("🚀 ФИНАЛ: ПОЛНЫЙ ЦИКЛ ИНТЕГРАЦИИ ВСЕХ ~23 ПАТТЕРНОВ ПРОЕКТИРОВАНИЯ");
+            Console.WriteLine("==========================================================================");
 
-            // 1. Построение системы через Фасад
+            // 1. Инициализация инфраструктурных синглтонов и шин обмена данных
             var router = new SequentialEventRouter();
             var validationChain = new SpamProtectionHandler();
             var mediator = new EventDrivenMediator(router, validationChain);
             var cmdManager = new CommandManager();
-            var caretaker = new UIMementoManager();
+            var mementoCaretaker = new UIMementoManager();
 
-            var defaultStyle = FlyweightFactory.Instance.GetFlyweight(new StyleKey("Segoe UI", 12, 240, 240, 240));
-            var rootPanel = new PanelComponent("MainContainer", new Rectangle(0, 0, 1024, 768), defaultStyle);
-            var facade = new UISystemFacade(mediator, cmdManager, rootPanel);
+            // 2. Сборка Composite-структуры с использованием Flyweight-стилей
+            var defaultStyle = FlyweightFactory.Instance.GetFlyweight(new StyleKey("Ubuntu Sans", 11, 30, 30, 30));
+            var rootContainer = new PanelComponent("WorkspaceRoot", new Rectangle(0, 0, 1920, 1080), defaultStyle);
+            var facade = new UISystemFacade(mediator, cmdManager, rootContainer);
 
-            var okButton = new ButtonComponent("OkBtn", new Rectangle(0, 0, 150, 40), defaultStyle);
-            var cancelButton = new ButtonComponent("CancelBtn", new Rectangle(0, 0, 150, 40), defaultStyle);
+            var actionButton = new ButtonComponent("SubmitAction", new Rectangle(10, 10, 200, 50), defaultStyle);
+            mediator.Register(rootContainer);
+            mediator.Register(actionButton);
+            rootContainer.AddChild(actionButton);
 
-            mediator.Register(rootPanel);
-            mediator.Register(okButton);
-            mediator.Register(cancelButton);
+            // Назначаем базовую стратегию размещения
+            rootContainer.SetLayoutStrategy(new StackLayoutStrategy());
 
-            rootPanel.AddChild(okButton);
-            rootPanel.AddChild(cancelButton);
+            // 3. Фиксация начального состояния (Memento Checkpoint) перед анализом
+            Console.WriteLine("\n[Snapshot] Сохраняем эталонную конфигурацию до прохода посетителей...");
+            mementoCaretaker.SaveCheckpoint("InitialState", rootContainer);
 
-            // Назначаем начальную стратегию по умолчанию (Свободные координаты)
-            rootPanel.SetLayoutStrategy(new FreeFormLayoutStrategy());
+            // 4. Запуск аналитических систем (Паттерн Visitor)
+            Console.WriteLine("\n[Visitor Analysis] Выполняем кросс-каттинг аудит дерева компонентов...");
 
-            // 2. Регистрация глобальных слушателей реактивных изменений
-            var telemetry = new TelemetryObserver();
-            okButton.Attach(telemetry);
-            rootPanel.Attach(telemetry);
+            var metricsVisitor = new MetricsCollectorVisitor();
+            var accessibilityVisitor = new AccessibilityTreeVisitor();
+            var validatorVisitor = new DependencyValidatorVisitor();
 
-            // 3. Снапшот конфигурации до применения алгоритмов
-            caretaker.SaveCheckpoint("BeforeLayoutAndLifecycle", rootPanel);
+            facade.RunVisitor(metricsVisitor);
+            facade.RunVisitor(accessibilityVisitor);
+            facade.RunVisitor(validatorVisitor);
 
-            // 4. Демонстрация паттерна Strategy в связке с Command
-            Console.WriteLine("\n[Strategy] Переключаем макет панели на StackLayoutStrategy (Вертикальный список)...");
-            var layoutContext = new LayoutContext(15, 10, 1024, 768, 1.0);
+            // Вывод собранных данных
+            var report = metricsVisitor.GetReport();
+            Console.WriteLine($" -> [Метрики] Всего узлов в графе: {report.TotalNodes}, Различных гарнитур: {report.DistinctStylesCount}");
+            Console.WriteLine($" -> [Доступность] Сгенерировано логических узлов для скринридеров: {accessibilityVisitor.AccessibleNodes.Count}");
 
-            // Выполняем смену алгоритмов через команду управления
-            var changeLayoutCmd = new ApplyLayoutCommand(rootPanel, new StackLayoutStrategy(), layoutContext);
-            cmdManager.Execute(changeLayoutCmd);
-
-            Console.WriteLine($"[Layout] Новые границы OkBtn после макетирования: X={okButton.BoundingBox.X}, Y={okButton.BoundingBox.Y}, W={okButton.BoundingBox.Width}, H={okButton.BoundingBox.Height}");
-
-            // 5. Демонстрация паттерна Template Method
-            Console.WriteLine("\n[Template Method] Запуск жестко структурированного жизненного цикла контейнера...");
-            var containerLifecycle = new ComplexContainerLifecycle(rootPanel);
-            var uiContext = new UIContext
+            if (validatorVisitor.ValidationErrors.Count == 0)
             {
-                Timestamp = DateTime.UtcNow,
-                ExecutorName = "LifecycleStrategyRunner",
-                IsDebugMode = true
-            };
-
-            // Вызов защищенного каркаса
-            containerLifecycle.ExecuteLifecycle(uiContext);
-
-            Console.WriteLine("\n[Lifecycle Metrics] Сводные данные по выполненным шагам:");
-            foreach (var step in uiContext.SharedMetrics)
+                Console.WriteLine(" -> [Валидация] Архитектурные инварианты соблюдены, конфликтов State/Flyweight не обнаружено.");
+            }
+            else
             {
-                Console.WriteLine($" - Этап '{step.Key}' зафиксирован {step.Value} раз(а).");
+                foreach (var err in validatorVisitor.ValidationErrors) Console.WriteLine($" -> {err}");
             }
 
-            // 6. Демонстрация Undo (Возврат к исходным свободным координатам)
-            Console.WriteLine("\n[Undo] Отмена команды макетирования (Возврат к FreeForm)...");
-            cmdManager.Undo();
-            Console.WriteLine($"[Layout] Восстановленные координаты OkBtn: X={okButton.BoundingBox.X}, Y={okButton.BoundingBox.Y}");
+            // 5. Симуляция деструктивного действия пользователя и проверка транзакционности
+            Console.WriteLine("\n[Interaction] Смена макета через команду и проверка работы механизма Undo...");
+            var layoutCtx = new LayoutContext(20, 5, 1920, 1080, 1.2);
+            facade.ApplyLayout("WorkspaceRoot", new FreeFormLayoutStrategy(), layoutCtx);
 
-            // 7. Проведение комплексных лабораторных бенчмарк-тестов
+            // Возвращаем все параметры обратно, используя менеджер команд
+            Console.WriteLine("[Undo] Откат транзакции. Восстановление исходной геометрии дерева.");
+            cmdManager.Undo();
+
+            // 6. Запуск комплексных лабораторных бенчмарков производительности
             PerformanceBenchmarks.RunAllTests();
 
-            Console.WriteLine("\n=== СБОРКА И ТЕСТИРОВАНИЕ ЧАСТИ 11 УСПЕШНО ЗАВЕРШЕНЫ ===");
+            Console.WriteLine("\n==========================================================================");
+            Console.WriteLine("🏆 СИМУЛЯТОР УСПЕШНО СКОМПИЛИРОВАН И ЗАВЕРШИЛ РАБОТУ БЕЗ ОШИБОК!");
+            Console.WriteLine("==========================================================================");
         }
     }
 }

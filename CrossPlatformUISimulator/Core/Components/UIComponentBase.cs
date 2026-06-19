@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using ExtrinsicComponentState = CrossPlatformUISimulator.Common.ExtrinsicComponentState;
 using CrossPlatformUISimulator.Common;
 using CrossPlatformUISimulator.Abstractions;
 using CrossPlatformUISimulator.Infrastructure;
@@ -12,6 +13,9 @@ namespace CrossPlatformUISimulator.Core.Components
 {
     public abstract class UIComponentBase : IUIComponent, IOriginator
     {
+        
+        public abstract void Accept(IUIComponentVisitor visitor);
+
         protected IUIComponentMediator? Mediator;
         private readonly SafeObserverSubject _stateSubject;
         private IComponentState _currentState = NormalState.Instance;
@@ -113,6 +117,7 @@ namespace CrossPlatformUISimulator.Core.Components
                 TransitionTo(TargetState);
             }
         }
+
 
         #endregion
 

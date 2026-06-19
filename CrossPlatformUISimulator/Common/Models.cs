@@ -49,5 +49,8 @@ namespace CrossPlatformUISimulator.Common
             : base($"[DSL Compile Error] {message} на позиции {position}") => Position = position;
     }
 
+    
+    public record MetricsReport(int TotalNodes, int ProxyCount, int MaterializedProxies, int DistinctStylesCount);
+    public record AccessibleNode(string Id, string Role, string Name, bool IsFocusable);
     #endregion
 }

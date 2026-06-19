@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
 using CrossPlatformUISimulator.Common;
+using ExtrinsicComponentState = CrossPlatformUISimulator.Common.ExtrinsicComponentState;
 using CrossPlatformUISimulator.Abstractions;
 using CrossPlatformUISimulator.Behavioral.Memento;
 using CrossPlatformUISimulator.Behavioral.Strategy;
@@ -128,6 +128,12 @@ namespace CrossPlatformUISimulator.Core.Components
                     childBase.Restore(memento);
                 }
             }
+        }
+
+        // ЧАСТЬ 34: Двойная диспетчеризация для контейнера панелей
+        public override void Accept(IUIComponentVisitor visitor)
+        {
+            visitor.Visit(this);
         }
     }
 }

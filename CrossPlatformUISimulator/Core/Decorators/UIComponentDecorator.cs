@@ -39,9 +39,10 @@ namespace CrossPlatformUISimulator.Core.Decorators
             set => WrappedComponent.Flyweight = value;
         }
 
-        // ЧАСТЬ 10: Делегирование новых членов интерфейса IUIComponent в обернутый компонент
+        
         public virtual IComponentState CurrentState => WrappedComponent.CurrentState;
         public virtual void TransitionTo(IComponentState newState) => WrappedComponent.TransitionTo(newState);
+
         public virtual void Attach(IUIStateObserver observer) => WrappedComponent.Attach(observer);
         public virtual void Detach(IUIStateObserver observer) => WrappedComponent.Detach(observer);
         public virtual void Notify(UIStateChangeData data) => WrappedComponent.Notify(data);
@@ -54,6 +55,13 @@ namespace CrossPlatformUISimulator.Core.Decorators
         public abstract IUIComponent Clone();
 
         public IUIComponent GetWrappedComponent() => WrappedComponent;
+
+        // Метод Visitor
+        public virtual void Accept(IUIComponentVisitor visitor)
+        {
+            visitor.Visit(this);
+            WrappedComponent.Accept(visitor);
+        }
 
         public virtual void Dispose() => WrappedComponent.Dispose();
     }

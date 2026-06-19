@@ -23,6 +23,9 @@ namespace CrossPlatformUISimulator.Abstractions
         void SetPosition(Point position);
         void SetMediator(IUIComponentMediator mediator);
         T? FindById<T>(string id) where T : class, IUIComponent;
+
+        // ЧАСТЬ 34: Точка входа для внешних алгоритмов анализа
+        void Accept(IUIComponentVisitor visitor);
     }
 
     public interface IContainerComponent : IUIComponent
@@ -31,8 +34,6 @@ namespace CrossPlatformUISimulator.Abstractions
         void AddChild(IUIComponent child);
         void RemoveChild(IUIComponent child);
         void ReplaceChild(string id, IUIComponent newChild);
-
-        // ЧАСТЬ 31: Управление стратегией размещения элементов внутри контейнера
         void SetLayoutStrategy(ILayoutStrategy strategy);
         IReadOnlyDictionary<string, Rectangle> CalculateLayout(LayoutContext context);
     }

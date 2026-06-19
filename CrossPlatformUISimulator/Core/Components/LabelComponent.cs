@@ -5,6 +5,12 @@ namespace CrossPlatformUISimulator.Core.Components
 {
     public class LabelComponent : UIComponentBase
     {
+
+        public override void Accept(IUIComponentVisitor visitor)
+        {
+            visitor.Visit(this);
+        }
+
         public LabelComponent(string id, Rectangle bounds, IUIStyleFlyweight flyweight)
             : base(id, bounds, flyweight) { }
 

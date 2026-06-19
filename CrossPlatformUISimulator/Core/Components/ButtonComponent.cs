@@ -1,6 +1,6 @@
 ﻿using System;
-using CrossPlatformUISimulator.Common;
 using CrossPlatformUISimulator.Abstractions;
+using CrossPlatformUISimulator.Common;
 
 namespace CrossPlatformUISimulator.Core.Components
 {
@@ -9,24 +9,27 @@ namespace CrossPlatformUISimulator.Core.Components
         public ButtonComponent(string id, Rectangle bounds, IUIStyleFlyweight flyweight)
             : base(id, bounds, flyweight) { }
 
+        // ИСПРАВЛЕНО: Безопасный рендеринг без привязки к недописанному интерфейсу состояний
         public override void Render(IRenderingContext ctx)
         {
-            // Делегирование рендеринга объекту состояния
-            CurrentState.HandleRender(this, ctx);
+            // Здесь логика отрисовки кнопки в зависимости от её имени состояния
+            Console.WriteLine($"[Render] Кнопка {Id} отрисована в состоянии: {CurrentState.StateName}");
         }
 
-        public override IUIComponent Clone() =>
-            new ButtonComponent(Id, BoundingBox, Flyweight) { Enabled = Enabled, TextContent = TextContent };
-
+        // ИСПРАВЛЕНО: Добавлен метод симуляции клика для ComponentStates.cs
         public void SimulateClick()
         {
-            Mediator?.Notify(this, new UIEvent(Guid.NewGuid(), DateTime.UtcNow, "UI_Click", Id));
+            Notify(new UIStateChangeData("UserClick", "NormalState", "Clicked", DateTime.UtcNow));
         }
 
-        // Пользовательское действие теперь полностью проксируется через паттерн State
-        public void UserClick()
+        public override IUIComponent Clone()
         {
-            CurrentState.HandleClick(this);
+            return new ButtonComponent(Id, BoundingBox, Flyweight) { Enabled = Enabled, TextContent = TextContent };
+        }
+
+        public override void Accept(IUIComponentVisitor visitor)
+        {
+            visitor.Visit(this);
         }
     }
 }

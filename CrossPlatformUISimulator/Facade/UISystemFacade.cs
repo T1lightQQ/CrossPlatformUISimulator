@@ -32,7 +32,6 @@ namespace CrossPlatformUISimulator.Facade
             comp?.Attach(observer);
         }
 
-        // ЧАСТЬ 31: Выполнение транзакции смены и расчета стратегии макета
         public void ApplyLayout(string containerId, ILayoutStrategy strategy, LayoutContext context)
         {
             var container = Root.FindById<IContainerComponent>(containerId);
@@ -41,6 +40,12 @@ namespace CrossPlatformUISimulator.Facade
                 var cmd = new ApplyLayoutCommand(container, strategy, context);
                 _commandManager.Execute(cmd);
             }
+        }
+
+        // ЧАСТЬ 34: Сервисный запуск посетителей из единого диспетчера
+        public void RunVisitor(IUIComponentVisitor visitor)
+        {
+            Root.Accept(visitor);
         }
 
         public void ExecuteDsl(string script)
