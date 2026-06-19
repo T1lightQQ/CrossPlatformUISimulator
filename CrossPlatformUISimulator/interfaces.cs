@@ -11,63 +11,54 @@ namespace CrossPlatformUISimulator
         T Clone();
     }
 
-    public interface IWidget : IPrototypical<IWidget>
+    public interface IUIComponent : IPrototypical<IUIComponent>
     {
-        void Show();
+        string Id { get; }
+        Rectangle BoundingBox { get; }
+        void Render(IRenderingContext ctx);
+        void SetPosition(Point position);
+        T? FindById<T>(string id) where T : class, IUIComponent;
     }
 
-    public interface IBtn : IPrototypical<IBtn>
+    public interface ILeafComponent : IUIComponent { }
+
+    public interface IContainerComponent : IUIComponent
     {
-        string Text { get; }
-        string Theme { get; }
-        void Click();
-        IBtn WithText(string text);
+        IReadOnlyList<IUIComponent> Children { get; }
+        void AddChild(IUIComponent child);
+        void RemoveChild(IUIComponent child);
     }
 
-    public interface ICheck : IPrototypical<ICheck>
+    public interface IRenderingStrategy
     {
-        string Theme { get; }
-        void Toggle();
-    }
-
-    public interface IFont
-    {
-        string Theme { get; }
-        void Print();
-    }
-
-    public interface IDialog : IPrototypical<IDialog>
-    {
-        string Title { get; }
-        IconSrc? Icon { get; }
-        List<IBtn> Buttons { get; }
-        List<IWidget> Widgets { get; }
-        string ThemeName { get; }
-        void ShowDialog();
-        IDialog AddWidget(IWidget widget);
+        string StrategyName { get; }
+        void DrawBackground(Rectangle rect, Color fill);
+        void DrawBorder(Rectangle rect, Color stroke, float thickness);
+        void DrawText(string text, FontMetrics font, Point position, Color color);
+        bool HitTest(Rectangle bounds, Point cursor);
+        void DisposeResources();
     }
 
     public interface IWidgetFactory
     {
-        IWidget CreateWidget(WidgetConfig config);
+        IUIComponent CreateWidget(WidgetConfig config, IRenderingStrategy strategy);
     }
 
     public interface IThemeFactory
     {
         string ThemeName { get; }
-        IBtn CreateButton(string text);
-        ICheck CreateCheckBox();
-        IFont CreateFontEngine();
+        IRenderingStrategy CreateRenderingStrategy();
     }
 
     public interface IContainerBuilder
     {
-        IContainerBuilder SetTitle(string title);
+        IContainerBuilder SetId(string id);
+        IContainerBuilder SetBounds(Rectangle bounds);
         IContainerBuilder AddButton(BtnConfig config);
-        IContainerBuilder SetIcon(IconSrc source);
         IContainerBuilder ConfigureTheme(IThemeFactory theme);
-        IContainerBuilder AddCustomWidget(IWidget widget);
-        IDialog Build();
+        IContainerBuilder AddComponent(IUIComponent component);
+        IContainerBuilder ApplyDecorator(Func<IUIComponent, UIComponentDecorator> decoratorFactory);
+        IContainerComponent Build();
     }
 
     public interface IApplicationTelemetry
@@ -76,5 +67,13 @@ namespace CrossPlatformUISimulator
         IReadOnlyDictionary<string, int> GetOperationCounts();
         GlobalUiSettings GetCurrentSettings();
         void ResetForTesting();
+    }
+
+    public interface IUISystemFacade
+    {
+        IContainerComponent CreateDialog(DialogPreset preset, ThemeType theme);
+        void ApplyGlobalTheme(ThemeType theme);
+        void RenderAllToContext(IRenderingContext ctx);
+        void LogCurrentMetrics();
     }
 }

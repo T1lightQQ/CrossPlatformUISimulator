@@ -7,86 +7,101 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator
 {
-    public class DialogBuilder : IContainerBuilder
+    public class UIContainerBuilder : IContainerBuilder
     {
-        private string? _title;
-        private IconSrc? _icon;
+        private string? _id;
+        private Rectangle? _bounds;
         private IThemeFactory? _theme;
-        private readonly List<BtnConfig> _btnConfigs = new();
-        private readonly List<IWidget> _widgets = new();
-        private int _buttonCount = 0;
-        private bool _hasTitle = false;
-        private bool _hasTheme = false;
+        private readonly List<BtnConfig> _buttonsToCreate = new();
+        private readonly List<IUIComponent> _customComponents = new();
+        private readonly List<Func<IUIComponent, UIComponentDecorator>> _decoratorsToApply = new();
 
-        public IContainerBuilder SetTitle(string title)
-        {
-            _title = title;
-            _hasTitle = !string.IsNullOrEmpty(title);
-            return this;
-        }
+        public IContainerBuilder SetId(string id) { _id = id; return this; }
+        public IContainerBuilder SetBounds(Rectangle bounds) { _bounds = bounds; return this; }
 
         public IContainerBuilder AddButton(BtnConfig config)
         {
-            _btnConfigs.Add(config);
-            _buttonCount++;
+            _buttonsToCreate.Add(config);
             return this;
         }
 
-        public IContainerBuilder SetIcon(IconSrc source)
+        public IContainerBuilder ConfigureTheme(IThemeFactory theme) { _theme = theme; return this; }
+
+        public IContainerBuilder AddComponent(IUIComponent component)
         {
-            _icon = source;
+            _customComponents.Add(component);
             return this;
         }
 
-        public IContainerBuilder ConfigureTheme(IThemeFactory theme)
+        public IContainerBuilder ApplyDecorator(Func<IUIComponent, UIComponentDecorator> decoratorFactory)
         {
-            _theme = theme;
-            _hasTheme = theme != null;
+            _decoratorsToApply.Add(decoratorFactory);
             return this;
         }
 
-        public IContainerBuilder AddCustomWidget(IWidget widget)
+        public IContainerComponent Build()
         {
-            _widgets.Add(widget);
-            return this;
-        }
-
-        public IDialog Build()
-        {
-            if (!_hasTheme || _theme == null)
-            {
-                throw new InvalidOperationException("Ошибка валидации: Тема оформления не задана.");
-            }
-            if (!_hasTitle || string.IsNullOrEmpty(_title))
-            {
-                throw new InvalidOperationException("Ошибка валидации: Отсутствует обязательный заголовок.");
-            }
-            if (_buttonCount == 0)
-            {
-                throw new InvalidOperationException("Ошибка валидации: Необходимо добавить хотя бы одну кнопку.");
-            }
+            if (_id == null || _bounds == null || _theme == null)
+                throw new InvalidOperationException("Ошибка валидации: Недостаточно данных для сборки контейнера.");
 
             var sw = Stopwatch.StartNew();
+            IRenderingStrategy strategy = _theme.CreateRenderingStrategy();
+            var rootPanel = new PanelComponent(_id, _bounds, strategy);
 
-            var buttons = new List<IBtn>();
-            foreach (var cfg in _btnConfigs)
+            foreach (var btnCfg in _buttonsToCreate)
             {
-                buttons.Add(_theme.CreateButton(cfg.Text));
+                rootPanel.AddChild(new ButtonComponent(btnCfg.Id, btnCfg.Bounds, btnCfg.Text, strategy));
             }
 
-            var result = new DlgObj
+            foreach (var comp in _customComponents)
             {
-                Title = _title,
-                Icon = _icon,
-                ThemeName = _theme.ThemeName,
-                Buttons = buttons,
-                Widgets = new List<IWidget>(_widgets)
-            };
+                rootPanel.AddChild(comp);
+            }
+
+            ValidateTree(rootPanel);
+
+            IUIComponent finalComponent = rootPanel;
+            foreach (var decoratorFactory in _decoratorsToApply)
+            {
+                finalComponent = decoratorFactory(finalComponent);
+            }
 
             sw.Stop();
-            ApplicationTelemetrySingleton.Instance.LogOperation("Builder", "Build", sw.Elapsed);
+            ApplicationTelemetrySingleton.Instance.LogOperation("Builder", "Build", sw.Elapsed, _id);
 
-            return result;
+            return (IContainerComponent)finalComponent;
+        }
+
+        private void ValidateTree(IContainerComponent root)
+        {
+            var visitedContainers = new HashSet<string>();
+            var registeredIds = new HashSet<string>();
+
+            var stack = new Stack<IUIComponent>();
+            stack.Push(root);
+
+            while (stack.Count > 0)
+            {
+                var current = stack.Pop();
+
+                if (!registeredIds.Add(current.Id))
+                {
+                    throw new InvalidOperationException($"Критическая ошибка иерархии: Обнаружен дубликат Id '{current.Id}' в поддереве!");
+                }
+
+                if (current is IContainerComponent container)
+                {
+                    if (!visitedContainers.Add(container.Id))
+                    {
+                        throw new InvalidOperationException("Критическая ошибка иерархии: Обнаружена циклическая ссылка в дереве компонентов!");
+                    }
+
+                    foreach (var child in container.Children)
+                    {
+                        stack.Push(child);
+                    }
+                }
+            }
         }
     }
 }

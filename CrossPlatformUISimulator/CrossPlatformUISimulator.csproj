@@ -9,7 +9,10 @@
 
   <ItemGroup>
     <Compile Remove="Counter.cs" />
+    <Compile Remove="DialogImpl.cs" />
     <Compile Remove="Implementations.cs" />
+    <Compile Remove="ThemeImpl.cs" />
+    <Compile Remove="WidgetImpl.cs" />
   </ItemGroup>
 
 </Project>
