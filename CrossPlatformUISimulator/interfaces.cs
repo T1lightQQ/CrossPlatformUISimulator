@@ -7,29 +7,23 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator
 {
-    public interface IPrototypical<T> where T : class
-    {
-        T Clone();
-    }
-
-    public interface IUIComponent : IPrototypical<IUIComponent>
+    public interface IUIComponent : IDisposable
     {
         string Id { get; }
         Rectangle BoundingBox { get; set; }
         string TextContent { get; set; }
         bool Enabled { get; set; }
-        IUIStyleFlyweight Flyweight { get; }
+        IUIStyleFlyweight Flyweight { get; set; }
         void Render(IRenderingContext ctx);
         void SetPosition(Point position);
-        T? FindById<T>(string id) where T : class, IUIComponent;
+        void SetMediator(IUIComponentMediator mediator);
     }
 
     public interface IContainerComponent : IUIComponent
     {
-        IReadOnlyList<IUIComponent> Children { get; }
+        System.Collections.Generic.IReadOnlyList<IUIComponent> Children { get; }
         void AddChild(IUIComponent child);
         void RemoveChild(IUIComponent child);
-        void ReplaceChild(string id, IUIComponent newChild);
     }
 
     public interface IUIStyleFlyweight
@@ -38,67 +32,33 @@ namespace CrossPlatformUISimulator
         ColorPalette Palette { get; }
     }
 
-    public interface ILazyComponentProxy : IUIComponent
+    public interface IUIComponentMediator
     {
-        bool IsMaterialized { get; }
-        void Materialize();
-        IUIComponent GetRealSubject();
+        void Register(IUIComponent component);
+        void Unregister(IUIComponent component);
+        void Notify(IUIComponent sender, UIEvent @event);
     }
 
-    public interface IProtectionProxy : IUIComponent
+    public interface IEventRouter
     {
-        bool IsLocked { get; }
-        void LockComponent();
+        void Route(UIEvent @event, System.Collections.Generic.IEnumerable<Subscription> subscriptions);
     }
 
-    public interface IRenderingStrategy
+    public interface IValidationHandler
     {
-        string StrategyName { get; }
-        void DrawBackground(Rectangle rect, Color fill);
+        IValidationHandler SetNext(IValidationHandler handler);
+        bool Validate(UIEvent @event);
     }
 
-    public interface IContainerBuilder
-    {
-        IContainerBuilder SetId(string id);
-        IContainerBuilder SetBounds(Rectangle bounds);
-        IContainerBuilder ConfigureTheme(IThemeFactory theme);
-        IContainerComponent Build();
-    }
+    // --- ИНТЕРФЕЙСЫ ПАТТЕРНА MEMENTO (GOF ОПРЕДЕЛЕНИЕ) ---
 
-    public interface IThemeFactory
-    {
-        IRenderingStrategy CreateRenderingStrategy();
-    }
+    // Opaque Token: маркерный интерфейс без публичных методов для защиты инкапсуляции
+    public interface IMemento { }
 
-    public interface IApplicationTelemetry
+    public interface IOriginator
     {
-        void LogOperation(string category, string action, TimeSpan duration, string? metadata = null);
-    }
-
-    public interface IUISystemFacade
-    {
-        IContainerComponent RootTree { get; }
-        IContainerComponent CreateDialog(DialogPreset preset, ThemeType theme);
-        void ExecuteDsl(string script);
-    }
-
-    // --- ИНТЕРФЕЙСЫ ПАТТЕРНА ITERATOR ---
-    public interface IUIComponentIterator : IEnumerator
-    {
-        // Каноническое сужение контракта IEnumerator под типизированный UI-компонент
-    }
-
-    public interface IIteratorFactory
-    {
-        IUIComponentIterator CreateDfs(IUIComponent root, Func<IUIComponent, bool>? predicate = null);
-        IUIComponentIterator CreateBfs(IUIComponent root, Func<IUIComponent, bool>? predicate = null);
-        IUIComponentIterator CreateProxyAware(IUIComponent root);
-    }
-
-    // --- ИНТЕРФЕЙС ПАТТЕРНА INTERPRETER ---
-    public interface IExpression
-    {
-        void Interpret(UIInterpreterContext context);
+        IMemento CreateMemento();
+        void Restore(IMemento memento);
     }
 
     public interface IUICommand
@@ -106,5 +66,10 @@ namespace CrossPlatformUISimulator
         void Execute();
         void Undo();
         string Description { get; }
+    }
+
+    public interface IApplicationTelemetry
+    {
+        void LogEvent(string status, string details);
     }
 }

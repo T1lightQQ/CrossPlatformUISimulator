@@ -8,10 +8,32 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="AppHost.cs" />
+    <Compile Remove="Builder.cs" />
+    <Compile Remove="ChainOfResponsibility.cs" />
+    <Compile Remove="CheckpointSimulationRunner.cs" />
+    <Compile Remove="Commands.cs" />
+    <Compile Remove="CommonModels.cs" />
     <Compile Remove="Counter.cs" />
     <Compile Remove="DialogImpl.cs" />
+    <Compile Remove="Directors.cs" />
+    <Compile Remove="Facade.cs" />
+    <Compile Remove="Factories.cs" />
     <Compile Remove="Implementations.cs" />
+    <Compile Remove="Infrastructure.cs" />
+    <Compile Remove="interfaces.cs" />
+    <Compile Remove="Interpreter.cs" />
+    <Compile Remove="Iterators.cs" />
+    <Compile Remove="Lexer.cs" />
+    <Compile Remove="Mediator.cs" />
+    <Compile Remove="Memento.cs" />
+    <Compile Remove="Models.cs" />
+    <Compile Remove="RenderingStrategies.cs" />
+    <Compile Remove="Runner.cs" />
+    <Compile Remove="SimulationRunner.cs" />
+    <Compile Remove="Telemetry.cs" />
     <Compile Remove="ThemeImpl.cs" />
+    <Compile Remove="UIComponents.cs" />
     <Compile Remove="WidgetImpl.cs" />
   </ItemGroup>
 

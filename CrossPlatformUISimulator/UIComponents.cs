@@ -7,51 +7,63 @@ using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator
 {
-    public abstract class UIComponentBase : IUIComponent
+    public abstract class UIComponentBase : IUIComponent, IOriginator
     {
-        protected IRenderingStrategy Strategy;
+        protected IUIComponentMediator? Mediator;
         public string Id { get; }
         public Rectangle BoundingBox { get; set; }
         public string TextContent { get; set; } = "";
         public bool Enabled { get; set; } = true;
         public IUIStyleFlyweight Flyweight { get; set; }
 
-        protected UIComponentBase(string id, Rectangle bounds, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
+        protected UIComponentBase(string id, Rectangle bounds, IUIStyleFlyweight flyweight)
         {
             Id = id;
             BoundingBox = bounds;
-            Strategy = strategy;
             Flyweight = flyweight;
         }
+
+        public void SetMediator(IUIComponentMediator mediator) => Mediator = mediator;
 
         public abstract void Render(IRenderingContext ctx);
         public void SetPosition(Point pos) => BoundingBox = new Rectangle(pos.X, pos.Y, BoundingBox.Width, BoundingBox.Height);
 
-        public T? FindById<T>(string id) where T : class, IUIComponent
+        // Реализация Originator для атомарного компонента
+        public virtual IMemento CreateMemento()
         {
-            if (Id == id && this is T target) return target;
-            return null;
+            var states = new Dictionary<string, ExtrinsicComponentState>
+            {
+                { Id, new ExtrinsicComponentState(BoundingBox, TextContent, Enabled, ((UIStyleFlyweightImpl)Flyweight).Key) }
+            };
+            return new TreeConfigurationMemento(states);
         }
 
-        public abstract IUIComponent Clone();
+        public virtual void Restore(IMemento memento)
+        {
+            if (memento is TreeConfigurationMemento treeMemento)
+            {
+                if (!treeMemento.SnapshotStates.TryGetValue(Id, out var state))
+                    throw new MementoIncompatibleException($"Компонент с ID '{Id}' отсутствует в снапшоте.");
+
+                BoundingBox = state.Bounds;
+                TextContent = state.Text;
+                Enabled = state.Enabled;
+                Flyweight = FlyweightFactory.Instance.GetFlyweight(state.Style);
+            }
+        }
+
+        public virtual void Dispose() => Mediator?.Unregister(this);
     }
 
     public class ButtonComponent : UIComponentBase
     {
-        public ButtonComponent(string id, Rectangle bounds, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
-            : base(id, bounds, strategy, flyweight) { }
-
-        public override void Render(IRenderingContext ctx) => Strategy.DrawBackground(BoundingBox, Flyweight.Palette.Background);
-        public override IUIComponent Clone() => new ButtonComponent(Id, BoundingBox, Strategy, Flyweight) { Enabled = Enabled, TextContent = TextContent };
-    }
-
-    public class LabelComponent : UIComponentBase
-    {
-        public LabelComponent(string id, Rectangle bounds, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
-            : base(id, bounds, strategy, flyweight) { }
-
+        public ButtonComponent(string id, Rectangle bounds, IUIStyleFlyweight flyweight) : base(id, bounds, flyweight) { }
         public override void Render(IRenderingContext ctx) { }
-        public override IUIComponent Clone() => new LabelComponent(Id, BoundingBox, Strategy, Flyweight) { Enabled = Enabled };
+
+        public void SimulateClick()
+        {
+            Mediator?.Notify(this, new UIEvent(Guid.NewGuid(), DateTime.UtcNow, "UI_Click", Id));
+        }
     }
 
     public class PanelComponent : UIComponentBase, IContainerComponent
@@ -59,34 +71,65 @@ namespace CrossPlatformUISimulator
         private readonly List<IUIComponent> _children = new();
         public IReadOnlyList<IUIComponent> Children => _children;
 
-        public PanelComponent(string id, Rectangle bounds, IRenderingStrategy strategy, IUIStyleFlyweight flyweight)
-            : base(id, bounds, strategy, flyweight) { }
+        public PanelComponent(string id, Rectangle bounds, IUIStyleFlyweight flyweight) : base(id, bounds, flyweight) { }
 
         public void AddChild(IUIComponent child) => _children.Add(child);
         public void RemoveChild(IUIComponent child) => _children.Remove(child);
-        public void ReplaceChild(string id, IUIComponent newChild)
-        {
-            for (int i = 0; i < _children.Count; i++)
-            {
-                if (_children[i].Id == id) { _children[i] = newChild; return; }
-            }
-        }
 
         public override void Render(IRenderingContext ctx)
         {
             foreach (var child in _children) child.Render(ctx);
         }
 
-        public override IUIComponent Clone()
+        // Рекурсивный сбор снапшотов по всему Composite-дереву
+        public override IMemento CreateMemento()
         {
-            var clone = new PanelComponent(Id, BoundingBox, Strategy, Flyweight);
-            foreach (var child in _children) clone.AddChild(child.Clone());
-            return clone;
+            var states = new Dictionary<string, ExtrinsicComponentState>
+            {
+                { Id, new ExtrinsicComponentState(BoundingBox, TextContent, Enabled, ((UIStyleFlyweightImpl)Flyweight).Key) }
+            };
+
+            foreach (var child in _children)
+            {
+                if (child is IOriginator childOriginator)
+                {
+                    var childMemento = (TreeConfigurationMemento)childOriginator.CreateMemento();
+                    foreach (var pair in childMemento.SnapshotStates)
+                    {
+                        states[pair.Key] = pair.Value;
+                    }
+                }
+            }
+
+            return new TreeConfigurationMemento(states);
+        }
+
+        // Рекурсивное восстановление и жесткая структурная валидация
+        public override void Restore(IMemento memento)
+        {
+            if (memento is TreeConfigurationMemento treeMemento)
+            {
+                if (!treeMemento.SnapshotStates.TryGetValue(Id, out var state))
+                    throw new MementoIncompatibleException($"Контейнер '{Id}' удален из структуры дерева конфигурации.");
+
+                BoundingBox = state.Bounds;
+                TextContent = state.Text;
+                Enabled = state.Enabled;
+                Flyweight = FlyweightFactory.Instance.GetFlyweight(state.Style);
+
+                foreach (var child in _children)
+                {
+                    if (child is IOriginator childOriginator)
+                    {
+                        childOriginator.Restore(treeMemento);
+                    }
+                }
+            }
         }
     }
 
-    // --- ДЕКОРАТОР КОМПОНЕНТОВ ---
-    public abstract class UIComponentDecorator : IUIComponent
+    // Декоратор прозрачно делегирует вызовы Memento обернутому компоненту
+    public abstract class UIComponentDecorator : IUIComponent, IOriginator
     {
         protected IUIComponent Component;
         protected UIComponentDecorator(IUIComponent component) => Component = component;
@@ -95,50 +138,19 @@ namespace CrossPlatformUISimulator
         public Rectangle BoundingBox { get => Component.BoundingBox; set => Component.BoundingBox = value; }
         public string TextContent { get => Component.TextContent; set => Component.TextContent = value; }
         public bool Enabled { get => Component.Enabled; set => Component.Enabled = value; }
-        public IUIStyleFlyweight Flyweight => Component.Flyweight;
+        public IUIStyleFlyweight Flyweight { get => Component.Flyweight; set => Component.Flyweight = value; }
 
-        public virtual void Render(IRenderingContext ctx) => Component.Render(ctx);
+        public void Render(IRenderingContext ctx) => Component.Render(ctx);
         public void SetPosition(Point position) => Component.SetPosition(position);
-        public T? FindById<T>(string id) where T : class, IUIComponent => Component.FindById<T>(id);
-        public IUIComponent GetWrappedComponent() => Component;
-        public abstract IUIComponent Clone();
+        public void SetMediator(IUIComponentMediator mediator) => Component.SetMediator(mediator);
+
+        public IMemento CreateMemento() => ((IOriginator)Component).CreateMemento();
+        public void Restore(IMemento memento) => ((IOriginator)Component).Restore(memento);
+        public void Dispose() => Component.Dispose();
     }
 
     public class BorderDecorator : UIComponentDecorator
     {
         public BorderDecorator(IUIComponent component) : base(component) { }
-        public override IUIComponent Clone() => new BorderDecorator(Component.Clone());
-    }
-
-    // --- ЛЕНИВЫЙ ВИРТУАЛЬНЫЙ ПРОКСИ ---
-    public class VirtualComponentProxy : ILazyComponentProxy
-    {
-        private IUIComponent? _realSubject;
-        public string Id { get; }
-        public bool IsMaterialized => _realSubject != null;
-        public Rectangle BoundingBox { get; set; }
-        public string TextContent { get; set; } = "";
-        public bool Enabled { get; set; } = true;
-        public IUIStyleFlyweight Flyweight => _realSubject?.Flyweight!;
-
-        public VirtualComponentProxy(string id, Rectangle bounds)
-        {
-            Id = id;
-            BoundingBox = bounds;
-        }
-
-        public void Materialize()
-        {
-            if (_realSubject == null)
-            {
-                _realSubject = new ButtonComponent(Id, BoundingBox, new DummyRasterStrategy(), FlyweightFactory.Instance.GetFlyweight(new StyleKey("Arial", 12, 0, 0, 0)));
-            }
-        }
-
-        public IUIComponent GetRealSubject() { Materialize(); return _realSubject!; }
-        public void Render(IRenderingContext ctx) => GetRealSubject().Render(ctx);
-        public void SetPosition(Point pos) => BoundingBox = new Rectangle(pos.X, pos.Y, BoundingBox.Width, BoundingBox.Height);
-        public T? FindById<T>(string id) where T : class, IUIComponent => Id == id ? this as T : _realSubject?.FindById<T>(id);
-        public IUIComponent Clone() => new VirtualComponentProxy(Id, BoundingBox);
     }
 }

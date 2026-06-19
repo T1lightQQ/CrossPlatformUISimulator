@@ -10,7 +10,14 @@ namespace CrossPlatformUISimulator
     public class TelemetrySingleton : IApplicationTelemetry
     {
         public static TelemetrySingleton Instance { get; } = new TelemetrySingleton();
-        public void LogOperation(string c, string a, TimeSpan d, string? m = null) { }
+        private int _delivered = 0;
+
+        public void LogEvent(string status, string details)
+        {
+            if (status == "Dispatched") System.Threading.Interlocked.Increment(ref _delivered);
+        }
+
+        public int GetDeliveredCount() => _delivered;
     }
 
     public class FlyweightFactory
@@ -19,34 +26,30 @@ namespace CrossPlatformUISimulator
         private readonly ConcurrentDictionary<StyleKey, IUIStyleFlyweight> _cache = new();
 
         public IUIStyleFlyweight GetFlyweight(StyleKey k) =>
-            _cache.GetOrAdd(k, key => new UIStyleFlyweightImpl
-            {
-                Font = new FontMetrics(key.FontName, key.FontSize),
-                Palette = new ColorPalette(new Color(key.R, key.G, key.B), new Color(0, 0, 0), new Color(255, 255, 255))
-            });
+            _cache.GetOrAdd(k, key => new UIStyleFlyweightImpl(key));
     }
 
     public class UIStyleFlyweightImpl : IUIStyleFlyweight
     {
-        public required FontMetrics Font { get; init; }
-        public required ColorPalette Palette { get; init; }
+        public StyleKey Key { get; }
+        public FontMetrics Font => new FontMetrics(Key.FontName, Key.FontSize);
+        public ColorPalette Palette => new ColorPalette(new Color(Key.R, Key.G, Key.B), new Color(0, 0, 0), new Color(0, 0, 0));
+
+        public UIStyleFlyweightImpl(StyleKey key) => Key = key;
     }
 
-    public class DummyRasterStrategy : IRenderingStrategy
+    public class UISystemFacade
     {
-        public string StrategyName => "Raster";
-        public void DrawBackground(Rectangle r, Color c) { }
-    }
+        private readonly EventDrivenMediator _mediator;
+        public PanelComponent Root { get; }
 
-    public class UIContainerBuilder : IContainerBuilder
-    {
-        private string _id = "Root";
-        private Rectangle _bounds = new Rectangle(0, 0, 800, 600);
+        public UISystemFacade(EventDrivenMediator mediator, PanelComponent root)
+        {
+            _mediator = mediator;
+            Root = root;
+        }
 
-        public IContainerBuilder SetId(string id) { _id = id; return this; }
-        public IContainerBuilder SetBounds(Rectangle bounds) { _bounds = bounds; return this; }
-        public IContainerBuilder ConfigureTheme(IThemeFactory theme) => this;
-
-        public IContainerComponent Build() => new PanelComponent(_id, _bounds, new DummyRasterStrategy(), FlyweightFactory.Instance.GetFlyweight(new StyleKey("Arial", 12, 0, 0, 0)));
+        public void Subscribe(Predicate<UIEvent> filter, Action<UIEvent> handler) => _mediator.AddSubscription(filter, handler);
+        public void Publish(IUIComponent sender, UIEvent @event) => _mediator.Notify(sender, @event);
     }
 }
