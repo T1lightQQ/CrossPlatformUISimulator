@@ -2,21 +2,30 @@
 using System.Collections.Generic;
 using CrossPlatformUISimulator.Common;
 using CrossPlatformUISimulator.Abstractions;
-using CrossPlatformUISimulator.Infrastructure;
 using CrossPlatformUISimulator.Behavioral.Memento;
+using CrossPlatformUISimulator.Infrastructure;
 
 namespace CrossPlatformUISimulator.Core.Components
 {
     public class PanelComponent : UIComponentBase, IContainerComponent
     {
         private readonly List<IUIComponent> _children = new();
+
         public IReadOnlyList<IUIComponent> Children => _children;
 
         public PanelComponent(string id, Rectangle bounds, IUIStyleFlyweight flyweight)
             : base(id, bounds, flyweight) { }
 
-        public void AddChild(IUIComponent child) => _children.Add(child);
-        public void RemoveChild(IUIComponent child) => _children.Remove(child);
+        public void AddChild(IUIComponent child)
+        {
+            _children.Add(child);
+            child.SetMediator(Mediator);
+        }
+
+        public void RemoveChild(IUIComponent child)
+        {
+            _children.Remove(child);
+        }
 
         public void ReplaceChild(string id, IUIComponent newChild)
         {
@@ -25,6 +34,7 @@ namespace CrossPlatformUISimulator.Core.Components
                 if (_children[i].Id == id)
                 {
                     _children[i] = newChild;
+                    newChild.SetMediator(Mediator);
                     return;
                 }
             }
@@ -32,12 +42,15 @@ namespace CrossPlatformUISimulator.Core.Components
 
         public override void Render(IRenderingContext ctx)
         {
-            foreach (var child in _children) child.Render(ctx);
+            foreach (var child in _children)
+            {
+                child.Render(ctx);
+            }
         }
 
         public override T? FindById<T>(string id) where T : class
         {
-            if (Id == id && this is T rootTarget) return rootTarget;
+            if (Id == id && this is T target) return target;
 
             foreach (var child in _children)
             {
@@ -57,25 +70,23 @@ namespace CrossPlatformUISimulator.Core.Components
             return clone;
         }
 
-        #region Рекурсивный сбор и восстановление Memento по всему дереву Composite
-
+        // ЧАСТЬ 10: Обновление сборки memento-словаря с учетом полиморфного StateName
         public override IMemento CreateMemento()
         {
             var styleImpl = (UIStyleFlyweightImpl)Flyweight;
             var states = new Dictionary<string, ExtrinsicComponentState>
             {
-                { Id, new ExtrinsicComponentState(BoundingBox, TextContent, Enabled, styleImpl.Key) }
+                { Id, new ExtrinsicComponentState(BoundingBox, TextContent, Enabled, styleImpl.Key, CurrentState.StateName) }
             };
 
-            // Собираем состояния всех дочерних элементов (включая вложенные контейнеры)
             foreach (var child in _children)
             {
-                if (child is IOriginator childOriginator)
+                if (child is UIComponentBase childBase)
                 {
-                    var childMemento = (TreeConfigurationMemento)childOriginator.CreateMemento();
-                    foreach (var pair in childMemento.SnapshotStates)
+                    var childMemento = (TreeConfigurationMemento)childBase.CreateMemento();
+                    foreach (var kvp in childMemento.SnapshotStates)
                     {
-                        states[pair.Key] = pair.Value;
+                        states[kvp.Key] = kvp.Value;
                     }
                 }
             }
@@ -84,27 +95,14 @@ namespace CrossPlatformUISimulator.Core.Components
 
         public override void Restore(IMemento memento)
         {
-            if (memento is TreeConfigurationMemento treeMemento)
+            base.Restore(memento);
+            foreach (var child in _children)
             {
-                if (!treeMemento.SnapshotStates.TryGetValue(Id, out var state))
-                    throw new MementoIncompatibleException($"Контейнер '{Id}' был удален из топологии дерева.");
-
-                BoundingBox = state.Bounds;
-                TextContent = state.Text;
-                Enabled = state.Enabled;
-                Flyweight = FlyweightFactory.Instance.GetFlyweight(state.Style);
-
-                // Каскадно передаем команду восстановления дочерним узлам
-                foreach (var child in _children)
+                if (child is UIComponentBase childBase)
                 {
-                    if (child is IOriginator childOriginator)
-                    {
-                        childOriginator.Restore(treeMemento);
-                    }
+                    childBase.Restore(memento);
                 }
             }
         }
-
-        #endregion
     }
 }

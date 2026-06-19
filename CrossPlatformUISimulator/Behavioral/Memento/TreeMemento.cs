@@ -4,10 +4,8 @@ using CrossPlatformUISimulator.Abstractions;
 
 namespace CrossPlatformUISimulator.Behavioral.Memento
 {
-    // Внешнее легковесное состояние конкретного компонента
-    public record ExtrinsicComponentState(Rectangle Bounds, string Text, bool Enabled, StyleKey Style);
+    // Убрали дубликат ExtrinsicComponentState, теперь структура берется напрямую из CrossPlatformUISimulator.Common
 
-    // Конкретный снимок (Memento)
     internal class TreeConfigurationMemento : IMemento
     {
         // Словарь: Key = ID компонента, Value = его сохраненное состояние

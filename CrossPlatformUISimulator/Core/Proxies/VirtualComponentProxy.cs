@@ -1,69 +1,80 @@
 ﻿using System;
 using CrossPlatformUISimulator.Common;
 using CrossPlatformUISimulator.Abstractions;
-using CrossPlatformUISimulator.Infrastructure;
-using CrossPlatformUISimulator.Core.Components;
 
 namespace CrossPlatformUISimulator.Core.Proxies
 {
-    // Если этого контракта не было в папке Abstractions, объявляем его здесь:
-    public interface ILazyComponentProxy : IUIComponent
+    public interface ILazyComponentProxy
     {
         bool IsMaterialized { get; }
-        void Materialize();
-        IUIComponent GetRealSubject();
     }
 
-    public class VirtualComponentProxy : ILazyComponentProxy
+    public class VirtualComponentProxy : IUIComponent, ILazyComponentProxy
     {
-        private IUIComponent? _realSubject;
+        private readonly Func<IUIComponent> _factory;
+        private IUIComponent? _instance;
 
         public string Id { get; }
-        public bool IsMaterialized => _realSubject != null;
-        public Rectangle BoundingBox { get; set; }
-        public string TextContent { get; set; } = "";
-        public bool Enabled { get; set; } = true;
+        public bool IsMaterialized => _instance != null;
 
-        // Свойство Flyweight заставляет прокси материализовать реальный объект
-        public IUIStyleFlyweight Flyweight
-        {
-            get => GetRealSubject().Flyweight;
-            set => GetRealSubject().Flyweight = value;
-        }
-
-        public VirtualComponentProxy(string id, Rectangle bounds)
+        public VirtualComponentProxy(string id, Func<IUIComponent> factory)
         {
             Id = id;
-            BoundingBox = bounds;
+            _factory = factory ?? throw new ArgumentNullException(nameof(factory));
         }
 
-        public void Materialize()
+        private IUIComponent EnsureMaterialized()
         {
-            if (_realSubject == null)
+            if (_instance == null)
             {
-                // Ленивое создание тяжелого объекта "по требованию"
-                var defaultKey = new StyleKey("Arial", 12, 0, 0, 0);
-                _realSubject = new ButtonComponent(Id, BoundingBox, FlyweightFactory.Instance.GetFlyweight(defaultKey))
-                {
-                    TextContent = this.TextContent,
-                    Enabled = this.Enabled
-                };
+                _instance = _factory();
             }
+            return _instance;
         }
 
-        public IUIComponent GetRealSubject()
+        public Rectangle BoundingBox
         {
-            Materialize();
-            return _realSubject!;
+            get => EnsureMaterialized().BoundingBox;
+            set => EnsureMaterialized().BoundingBox = value;
         }
 
-        public void Render(IRenderingContext ctx) => GetRealSubject().Render(ctx);
-        public void SetPosition(Point pos) => BoundingBox = new Rectangle(pos.X, pos.Y, BoundingBox.Width, BoundingBox.Height);
-        public void SetMediator(IUIComponentMediator mediator) => GetRealSubject().SetMediator(mediator);
-        public T? FindById<T>(string id) where T : class, IUIComponent => Id == id ? this as T : _realSubject?.FindById<T>(id);
+        public string TextContent
+        {
+            get => EnsureMaterialized().TextContent;
+            set => EnsureMaterialized().TextContent = value;
+        }
 
-        public IUIComponent Clone() => new VirtualComponentProxy(Id, BoundingBox);
+        public bool Enabled
+        {
+            get => EnsureMaterialized().Enabled;
+            set => EnsureMaterialized().Enabled = value;
+        }
 
-        public void Dispose() => _realSubject?.Dispose();
+        public IUIStyleFlyweight Flyweight
+        {
+            get => EnsureMaterialized().Flyweight;
+            set => EnsureMaterialized().Flyweight = value;
+        }
+
+        // ЧАСТЬ 10: Проксирование вызовов состояния к реальному материализованному объекту
+        public IComponentState CurrentState => EnsureMaterialized().CurrentState;
+        public void TransitionTo(IComponentState newState) => EnsureMaterialized().TransitionTo(newState);
+        public void Attach(IUIStateObserver observer) => EnsureMaterialized().Attach(observer);
+        public void Detach(IUIStateObserver observer) => EnsureMaterialized().Detach(observer);
+        public void Notify(UIStateChangeData data) => EnsureMaterialized().Notify(data);
+
+        public void Render(IRenderingContext ctx) => EnsureMaterialized().Render(ctx);
+        public void SetPosition(Point position) => EnsureMaterialized().SetPosition(position);
+        public void SetMediator(IUIComponentMediator mediator) => EnsureMaterialized().SetMediator(mediator);
+
+        public T? FindById<T>(string id) where T : class, IUIComponent
+        {
+            if (Id == id) return EnsureMaterialized() as T;
+            return EnsureMaterialized().FindById<T>(id);
+        }
+
+        public IUIComponent Clone() => new VirtualComponentProxy(Id, _factory);
+
+        public void Dispose() => _instance?.Dispose();
     }
 }

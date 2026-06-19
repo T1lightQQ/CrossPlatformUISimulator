@@ -1,4 +1,6 @@
-﻿using CrossPlatformUISimulator.Abstractions;
+﻿using System;
+using CrossPlatformUISimulator.Common;
+using CrossPlatformUISimulator.Abstractions;
 
 namespace CrossPlatformUISimulator.Core.Decorators
 {
@@ -8,11 +10,14 @@ namespace CrossPlatformUISimulator.Core.Decorators
 
         public override void Render(IRenderingContext ctx)
         {
-            // 1. Отрисовка рамки вокруг компонента
-            // 2. Вызов базовой отрисовки самого компонента
+            // Симуляция логики отрисовки декоративной рамки вокруг компонента
             base.Render(ctx);
         }
 
-        public override IUIComponent Clone() => new BorderDecorator(Component.Clone());
+        public override IUIComponent Clone()
+        {
+            // Исправлено: использование WrappedComponent из базового класса UIComponentDecorator
+            return new BorderDecorator(WrappedComponent.Clone());
+        }
     }
 }

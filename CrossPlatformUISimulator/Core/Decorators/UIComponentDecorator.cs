@@ -4,31 +4,57 @@ using CrossPlatformUISimulator.Abstractions;
 
 namespace CrossPlatformUISimulator.Core.Decorators
 {
-    public abstract class UIComponentDecorator : IUIComponent, IOriginator
+    public abstract class UIComponentDecorator : IUIComponent
     {
-        protected IUIComponent Component;
+        protected readonly IUIComponent WrappedComponent;
 
-        protected UIComponentDecorator(IUIComponent component) => Component = component ?? throw new ArgumentNullException(nameof(component));
+        protected UIComponentDecorator(IUIComponent component)
+        {
+            WrappedComponent = component ?? throw new ArgumentNullException(nameof(component));
+        }
 
-        public string Id => Component.Id;
-        public Rectangle BoundingBox { get => Component.BoundingBox; set => Component.BoundingBox = value; }
-        public string TextContent { get => Component.TextContent; set => Component.TextContent = value; }
-        public bool Enabled { get => Component.Enabled; set => Component.Enabled = value; }
-        public IUIStyleFlyweight Flyweight { get => Component.Flyweight; set => Component.Flyweight = value; }
+        public virtual string Id => WrappedComponent.Id;
 
-        public virtual void Render(IRenderingContext ctx) => Component.Render(ctx);
-        public void SetPosition(Point position) => Component.SetPosition(position);
-        public void SetMediator(IUIComponentMediator mediator) => Component.SetMediator(mediator);
-        public T? FindById<T>(string id) where T : class, IUIComponent => Component.FindById<T>(id);
+        public virtual Rectangle BoundingBox
+        {
+            get => WrappedComponent.BoundingBox;
+            set => WrappedComponent.BoundingBox = value;
+        }
 
-        public IUIComponent GetWrappedComponent() => Component;
+        public virtual string TextContent
+        {
+            get => WrappedComponent.TextContent;
+            set => WrappedComponent.TextContent = value;
+        }
 
+        public virtual bool Enabled
+        {
+            get => WrappedComponent.Enabled;
+            set => WrappedComponent.Enabled = value;
+        }
+
+        public virtual IUIStyleFlyweight Flyweight
+        {
+            get => WrappedComponent.Flyweight;
+            set => WrappedComponent.Flyweight = value;
+        }
+
+        // ЧАСТЬ 10: Делегирование новых членов интерфейса IUIComponent в обернутый компонент
+        public virtual IComponentState CurrentState => WrappedComponent.CurrentState;
+        public virtual void TransitionTo(IComponentState newState) => WrappedComponent.TransitionTo(newState);
+        public virtual void Attach(IUIStateObserver observer) => WrappedComponent.Attach(observer);
+        public virtual void Detach(IUIStateObserver observer) => WrappedComponent.Detach(observer);
+        public virtual void Notify(UIStateChangeData data) => WrappedComponent.Notify(data);
+
+        public virtual void Render(IRenderingContext ctx) => WrappedComponent.Render(ctx);
+        public virtual void SetPosition(Point position) => WrappedComponent.SetPosition(position);
+        public virtual void SetMediator(IUIComponentMediator mediator) => WrappedComponent.SetMediator(mediator);
+
+        public virtual T? FindById<T>(string id) where T : class, IUIComponent => WrappedComponent.FindById<T>(id);
         public abstract IUIComponent Clone();
 
-        // Прозрачное делегирование Memento обернутому компоненту
-        public IMemento CreateMemento() => ((IOriginator)Component).CreateMemento();
-        public void Restore(IMemento memento) => ((IOriginator)Component).Restore(memento);
+        public IUIComponent GetWrappedComponent() => WrappedComponent;
 
-        public virtual void Dispose() => Component.Dispose();
+        public virtual void Dispose() => WrappedComponent.Dispose();
     }
 }

@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace CrossPlatformUISimulator.Common
 {
@@ -20,6 +17,12 @@ namespace CrossPlatformUISimulator.Common
 
     // Единица трансляции DSL скрипта
     public record Token(TokenType Type, string Value, int Position);
+
+    // ЧАСТЬ 28: Атомарные данные изменения состояния для паттерна Observer
+    public record UIStateChangeData(string StateType, string OldValue, string NewValue, DateTime Timestamp);
+
+    // ЧАСТЬ 29: Расширенный снимок состояния для паттерна Memento с поддержкой StateName
+    public record ExtrinsicComponentState(Rectangle Bounds, string Text, bool Enabled, StyleKey Style, string StateName);
 
     public record DialogPreset
     {

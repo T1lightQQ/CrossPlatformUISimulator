@@ -5,8 +5,9 @@ using CrossPlatformUISimulator.Infrastructure;
 using CrossPlatformUISimulator.Behavioral.Mediator;
 using CrossPlatformUISimulator.Behavioral.Command;
 using CrossPlatformUISimulator.Behavioral.Memento;
+using CrossPlatformUISimulator.Behavioral.State;
+using CrossPlatformUISimulator.Behavioral.Observer;
 using CrossPlatformUISimulator.Core.Components;
-using CrossPlatformUISimulator.Core.Decorators;
 
 namespace CrossPlatformUISimulator
 {
@@ -14,53 +15,63 @@ namespace CrossPlatformUISimulator
     {
         public static void Main()
         {
-            Console.WriteLine("=== ЗАПУСК: МОДУЛЬНАЯ АРХИТЕКТУРА УСПЕШНО ИНИЦИАЛИЗИРОВАНА ===");
+            Console.WriteLine("=== ЧАСТЬ 10: СИНТЕНЗ ВСЕХ ~20 ПАТТЕРНОВ (STATE + OBSERVER) ===");
 
-            // 1. Инициализация инфраструктуры и поведенческого слоя
+            // 1. Конфигурация подсистем
             var router = new SequentialEventRouter();
             var validationChain = new SpamProtectionHandler();
             var mediator = new EventDrivenMediator(router, validationChain);
             var cmdManager = new CommandManager();
             var caretaker = new UIMementoManager();
 
-            // 2. Создание корневых элементов UI через Легковесы
             var defaultStyle = FlyweightFactory.Instance.GetFlyweight(new StyleKey("Segoe UI", 12, 240, 240, 240));
             var rootPanel = new PanelComponent("MainWindow", new Rectangle(0, 0, 1024, 768), defaultStyle);
+            var facade = new UISystemFacade(mediator, cmdManager, rootPanel);
 
-            // Заворачиваем всё в Фасад
-            var systemFacade = new UISystemFacade(mediator, cmdManager, rootPanel);
-
-            // 3. Наполнение дерева и регистрация в Медиаторе
-            var dangerButton = new ButtonComponent("DeleteBtn", new Rectangle(20, 20, 120, 40), defaultStyle) { Enabled = false };
+            var actionButton = new ButtonComponent("SubmitBtn", new Rectangle(50, 50, 200, 50), defaultStyle);
             mediator.Register(rootPanel);
-            mediator.Register(dangerButton);
+            mediator.Register(actionButton);
+            rootPanel.AddChild(actionButton);
 
-            // Декорируем кнопку рамкой и добавляем на панель
-            rootPanel.AddChild(new BorderDecorator(dangerButton));
+            // 2. Реактивная интеграция (Observer)
+            var telemetryObs = new TelemetryObserver();
+            var themeObs = new ThemeSyncObserver();
+            actionButton.Attach(telemetryObs);
+            actionButton.Attach(themeObs);
 
-            // 4. Логирование событий
-            systemFacade.Subscribe(
-                e => e.EventType == "UI_Click",
-                e => Console.WriteLine($"[ФАСАД ПЕРЕХВАТ] Нажата кнопка: {e.Payload}")
-            );
+            // 3. Фиксация стабильного снапшота (Memento)
+            caretaker.SaveCheckpoint("StableSnapshot", rootPanel);
 
-            // 5. Тестирование Снапшота (Memento)
-            Console.WriteLine("\n[Caretaker] Делаем снимок системы 'v1.0'...");
-            caretaker.SaveCheckpoint("v1.0", rootPanel);
+            // 4. Демонстрация изменения поведения (State)
+            Console.WriteLine($"\n[State] Текущее состояние кнопки: {actionButton.CurrentState.StateName}");
+            Console.WriteLine("[User] Инициируем клик в NormalState:");
+            actionButton.UserClick(); // Сработает Медиатор
 
-            // 6. Выполнение скрипта DSL
-            string script = "SELECT <Button> WHERE Enabled=false -> EXECUTE ApplyTheme('Fluent') -> SetPosition(10,20)";
-            Console.WriteLine($"\n[DSL] Парсинг и запуск скрипта: {script}");
-            systemFacade.ExecuteDsl(script);
+            Console.WriteLine("\n[Command] Переводим кнопку в LoadingState через команду...");
+            var loadingCmd = new StartLoadingCommand(actionButton);
+            cmdManager.Execute(loadingCmd); // Trigger State Change -> Notify Observers
 
-            Console.WriteLine($"[Результат DSL] Координаты кнопки: X={dangerButton.BoundingBox.X}, Y={dangerButton.BoundingBox.Y}");
+            Console.WriteLine($"\n[State] Текущее состояние кнопки: {actionButton.CurrentState.StateName}");
+            Console.WriteLine("[User] Пытаемся нажать кнопку во время загрузки:");
+            actionButton.UserClick(); // Клик заблокирован полиморфным LoadingState (NoOp)
 
-            // 7. Проверка Undo (Command)
-            Console.WriteLine("\n[Undo] Отмена последних изменений...");
+            // 5. Использование Undo (Возврат к Normal)
+            Console.WriteLine("\n[Undo] Отмена команды загрузки...");
             cmdManager.Undo();
-            Console.WriteLine($"[Результат Undo] Координаты вернулись к: X={dangerButton.BoundingBox.X}, Y={dangerButton.BoundingBox.Y}");
+            Console.WriteLine($"[State] Состояние после отмены: {actionButton.CurrentState.StateName}");
 
-            Console.WriteLine("\n=== СБОРКА И РЕБИЛД СИСТЕМЫ ПОЛНОСТЬЮ ЗАВЕРШЕНЫ ===");
+            // 6. Искусственный перевод в аварийный режим
+            Console.WriteLine("\n[Command] Перевод в аварийный режим...");
+            cmdManager.Execute(new TriggerErrorCommand(actionButton));
+            Console.WriteLine($"[State] Состояние: {actionButton.CurrentState.StateName}, Текст: {actionButton.TextContent}");
+
+            // 7. Полный откат иерархии через Топологический Memento Снапшот
+            Console.WriteLine("\n[Memento] Восстановление системы к первоначальному чекпоинту...");
+            caretaker.RestoreCheckpoint("StableSnapshot", rootPanel);
+            Console.WriteLine($"[State] Финальное состояние кнопки: {actionButton.CurrentState.StateName}, Текст: {actionButton.TextContent}");
+
+            // 8. Запуск нагрузочного профилирования производительности
+            PerformanceBenchmarks.RunAllTests();
         }
     }
 }

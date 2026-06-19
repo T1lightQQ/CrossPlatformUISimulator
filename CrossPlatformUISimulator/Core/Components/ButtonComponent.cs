@@ -11,16 +11,22 @@ namespace CrossPlatformUISimulator.Core.Components
 
         public override void Render(IRenderingContext ctx)
         {
-            // Логика отрисовки кнопки (в симуляторе оставляем пустой или пишем лог)
+            // Делегирование рендеринга объекту состояния
+            CurrentState.HandleRender(this, ctx);
         }
 
         public override IUIComponent Clone() =>
             new ButtonComponent(Id, BoundingBox, Flyweight) { Enabled = Enabled, TextContent = TextContent };
 
-        // Инкапсуляция действия: Кнопка ничего не знает о других окнах, она просто шлет сигнал Медиатору
         public void SimulateClick()
         {
             Mediator?.Notify(this, new UIEvent(Guid.NewGuid(), DateTime.UtcNow, "UI_Click", Id));
+        }
+
+        // Пользовательское действие теперь полностью проксируется через паттерн State
+        public void UserClick()
+        {
+            CurrentState.HandleClick(this);
         }
     }
 }

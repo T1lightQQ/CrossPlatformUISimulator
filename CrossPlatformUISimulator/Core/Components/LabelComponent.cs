@@ -10,7 +10,7 @@ namespace CrossPlatformUISimulator.Core.Components
 
         public override void Render(IRenderingContext ctx)
         {
-            // Логика отрисовки текстовой метки (в симуляторе оставляем пустой)
+            CurrentState.HandleRender(this, ctx);
         }
 
         public override IUIComponent Clone() =>

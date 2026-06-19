@@ -8,7 +8,6 @@ using CrossPlatformUISimulator.DSL;
 
 namespace CrossPlatformUISimulator.Facade
 {
-    // Паттерн Facade (Фасад)
     public class UISystemFacade
     {
         private readonly EventDrivenMediator _mediator;
@@ -25,6 +24,13 @@ namespace CrossPlatformUISimulator.Facade
 
         public void Subscribe(Predicate<UIEvent> filter, Action<UIEvent> handler) =>
             _mediator.AddSub(filter, handler);
+
+        // Быстрая регистрация наблюдателей изменений состояния через Фасад
+        public void AttachObserverTo(string componentId, IUIStateObserver observer)
+        {
+            var comp = Root.FindById<IUIComponent>(componentId);
+            comp?.Attach(observer);
+        }
 
         public void ExecuteDsl(string script)
         {

@@ -10,14 +10,18 @@ namespace CrossPlatformUISimulator.Abstractions
         T Clone();
     }
 
-    // Корневой компонент (Базовый интерфейс для Composite, Proxy, Decorator)
-    public interface IUIComponent : IPrototypical<IUIComponent>, IDisposable
+    // Корневой компонент (Базовый интерфейс для Composite, Proxy, Decorator, Subject)
+    public interface IUIComponent : IPrototypical<IUIComponent>, IDisposable, IUIStateSubject
     {
         string Id { get; }
         Rectangle BoundingBox { get; set; }
         string TextContent { get; set; }
         bool Enabled { get; set; }
         IUIStyleFlyweight Flyweight { get; set; }
+
+        // Паттерн State: Доступ к текущему полиморфному состоянию и метод безопасного перехода
+        IComponentState CurrentState { get; }
+        void TransitionTo(IComponentState newState);
 
         void Render(IRenderingContext ctx);
         void SetPosition(Point position);
