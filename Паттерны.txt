@@ -1,0 +1,45 @@
+1
+Abstract Factory
+Method Factory
+
+2
+Prototype
+Builder
+
+3
+Adapter
+Singltone
+
+4
+Composite
+Bridge
+
+5
+Facade
+Decorator
+
+6
+Proxy
+Flyweight
+
+7
+Strategy
+Template Method
+
+8
+Observer
+State
+
+9
+Mediator
+Memento
+
+10
+Iterator
+Interpreter
+
+11
+Chain of Responsobility
+Command
+
+
