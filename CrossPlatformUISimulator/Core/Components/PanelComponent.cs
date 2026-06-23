@@ -62,6 +62,8 @@ namespace CrossPlatformUISimulator.Core.Components
             }
         }
 
+
+        // Компановщик
         public override void Render(IRenderingContext ctx)
         {
             foreach (var child in _children)
@@ -82,6 +84,9 @@ namespace CrossPlatformUISimulator.Core.Components
             return null;
         }
 
+
+        // Прототип
+        // Глубокое копирование
         public override IUIComponent Clone()
         {
             var clone = new PanelComponent(Id, BoundingBox, Flyweight) { Enabled = Enabled, TextContent = TextContent };

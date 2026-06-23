@@ -13,6 +13,7 @@ namespace CrossPlatformUISimulator.Behavioral.Visitor
     // Это изолирует структуру Composite от логики фильтрации (например, пропуск скрытых веток) внутри алгоритмов.
 
     
+    // Визитор
     public class MetricsCollectorVisitor : IUIComponentVisitor
     {
         private int _totalNodes;

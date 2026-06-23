@@ -10,6 +10,8 @@ namespace CrossPlatformUISimulator.Abstractions
         IRenderingStrategy CreateRenderingStrategy();
     }
 
+
+    // Абстрактная фабрика
     public interface IWidgetFactory
     {
         IUIComponent CreateButton(string id, Rectangle bounds, IUIStyleFlyweight flyweight);
@@ -21,6 +23,7 @@ namespace CrossPlatformUISimulator.Abstractions
     {
     }
 
+    // Фабричный метод
     public interface IIteratorFactory
     {
         IUIComponentIterator CreateDfs(IUIComponent root, Func<IUIComponent, bool>? predicate = null);

@@ -50,6 +50,7 @@ namespace CrossPlatformUISimulator.Core.Components
             return null;
         }
 
+        // Прототип
         public abstract IUIComponent Clone();
 
         #region Реализация паттернов State и Observer (Subject)

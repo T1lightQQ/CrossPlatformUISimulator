@@ -11,11 +11,15 @@ namespace CrossPlatformUISimulator.Facade
 {
     public class UISystemFacade
     {
+
+       
+
         private readonly EventDrivenMediator _mediator;
         private readonly CommandManager _commandManager;
 
         public PanelComponent Root { get; }
-
+        
+        // Фасад
         public UISystemFacade(EventDrivenMediator mediator, CommandManager commandManager, PanelComponent root)
         {
             _mediator = mediator;
@@ -23,9 +27,11 @@ namespace CrossPlatformUISimulator.Facade
             Root = root;
         }
 
+        // Упрощенный доступ к медиатору
         public void Subscribe(Predicate<UIEvent> filter, Action<UIEvent> handler) =>
             _mediator.AddSub(filter, handler);
 
+        // Упрощенный доступ к Обсерверу
         public void AttachObserverTo(string componentId, IUIStateObserver observer)
         {
             var comp = Root.FindById<IUIComponent>(componentId);

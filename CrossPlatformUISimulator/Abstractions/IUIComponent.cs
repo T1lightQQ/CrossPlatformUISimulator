@@ -4,6 +4,7 @@ using CrossPlatformUISimulator.Common;
 
 namespace CrossPlatformUISimulator.Abstractions
 {
+
     public interface IPrototypical<T> where T : class
     {
         T Clone();

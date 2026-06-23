@@ -26,6 +26,8 @@ namespace CrossPlatformUISimulator.Core.Proxies
 
         public IUIComponent? GetMaterializedState() => _instance;
 
+
+        // Прокси
         private IUIComponent EnsureMaterialized()
         {
             if (_instance == null) _instance = _factory();

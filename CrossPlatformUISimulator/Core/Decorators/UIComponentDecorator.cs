@@ -8,6 +8,8 @@ namespace CrossPlatformUISimulator.Core.Decorators
     {
         protected readonly IUIComponent WrappedComponent;
 
+
+        // Декоратор
         protected UIComponentDecorator(IUIComponent component)
         {
             WrappedComponent = component ?? throw new ArgumentNullException(nameof(component));

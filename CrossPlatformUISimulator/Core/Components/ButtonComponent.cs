@@ -22,6 +22,8 @@ namespace CrossPlatformUISimulator.Core.Components
             Notify(new UIStateChangeData("UserClick", "NormalState", "Clicked", DateTime.UtcNow));
         }
 
+        // Прототип
+        // Не глубокое копирование
         public override IUIComponent Clone()
         {
             return new ButtonComponent(Id, BoundingBox, Flyweight) { Enabled = Enabled, TextContent = TextContent };

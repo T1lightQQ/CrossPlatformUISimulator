@@ -6,10 +6,12 @@ using CrossPlatformUISimulator.Abstractions;
 namespace CrossPlatformUISimulator.Infrastructure
 {
     
+    // Адаптер
     public class UIStyleFlyweightImpl : IUIStyleFlyweight
     {
         public StyleKey Key { get; }
 
+        // Адаптация
         public FontMetrics Font => new FontMetrics(Key.FontName, Key.FontSize);
 
         public ColorPalette Palette => new ColorPalette(
@@ -22,6 +24,7 @@ namespace CrossPlatformUISimulator.Infrastructure
     }
 
     
+    // Легковес
     public class FlyweightFactory
     {
         public static FlyweightFactory Instance { get; } = new FlyweightFactory();
